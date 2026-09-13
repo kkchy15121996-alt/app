@@ -1,0 +1,161 @@
+{
+  "app_name": "Kapa Learning",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A crisp, hyper-efficient, and trustworthy quick-commerce experience utilizing clean whites and emerald greens to make educational supply shopping instantaneous.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#1A1D1C",
+    "surfaceSecondary": "#F5F7F6",
+    "onSurfaceSecondary": "#343A38",
+    "surfaceTertiary": "#EAECEB",
+    "onSurfaceTertiary": "#4B5350",
+    "surfaceInverse": "#1A1D1C",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#0C8346",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#0C8346",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#E6F5EC",
+    "onBrandSecondary": "#0C8346",
+    "brandTertiary": "#F0F9F4",
+    "onBrandTertiary": "#086033",
+    "success": "#0C8346",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F5A623",
+    "onWarning": "#FFFFFF",
+    "error": "#D93025",
+    "onError": "#FFFFFF",
+    "info": "#17A2B8",
+    "onInfo": "#FFFFFF",
+    "border": "#E1E5E3",
+    "borderStrong": "#B4C2BC",
+    "divider": "#E1E5E3",
+    "muted": "#7A8782"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room for readability, but compact lists for product grids to maximize screen real estate. Always account for Safe Area at root.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Apply to the floating persistent cart tray",
+      "Apply to the sticky header over scrolling content",
+      "Apply to the bottom sheet headers and drag handles"
+    ],
+    "dont's": [
+      "Do not apply to product cards or standard list rows",
+      "Do not apply to form inputs or body content regions"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-blur",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "Drive immediate discovery and quick adds via predictive search, banners, and an optimized 4x2 category grid.",
+      "states": {
+        "loading": "Centered spinner with a 'Fetching nearest store' text.",
+        "empty": "Illustration of a student backpack with 'No products found nearby' and a 'Change Location' primary CTA.",
+        "error": "Readable network error message with a 'Retry Connection' button."
+      },
+      "layout": "Sticky dynamic header (SLA badge, location accordion) at the top -> Search Bar -> Promotional Banner Carousel -> 4x2 Category Grid -> Horizontal Product Rails. Ensure the Floating Cart Tray sits above the bottom tab bar when items are present."
+    },
+    {
+      "name": "Categories",
+      "purpose": "Enable fast browsing through a split-screen view with a static sidebar rail and dynamic product grid.",
+      "states": {
+        "loading": "Skeleton loaders for the 2-col product grid.",
+        "empty": "No items found in this category message with 'Browse all supplies' CTA.",
+        "error": "Error message with 'Reload Category' button."
+      },
+      "layout": "25% width sticky vertical sidebar on the left for category selection, 75% width on the right for a 2-column product grid. Each product card includes a morphing '+ ADD' quantity stepper."
+    },
+    {
+      "name": "Live Order Tracking",
+      "purpose": "Provide real-time visibility into the hyperlocal delivery process with an animated map and step progress.",
+      "states": {
+        "loading": "Map loading skeleton.",
+        "empty": "No active orders state with a button to 'Browse Supplies'.",
+        "error": "Failed to load tracking data, retry button provided."
+      },
+      "layout": "Top half displays the animated route map. Bottom half displays a 4-stage vertical step progress indicator (Order Placed, Packed, Out for Delivery, Delivered) and delivery partner details."
+    }
+  ],
+  "haptics": {
+    "events": {
+      "add_to_cart": "selection",
+      "quantity_increase": "light",
+      "quantity_decrease": "light",
+      "checkout_submit": "success",
+      "category_switch": "selection",
+      "tab_change": "light"
+    }
+  },
+  "images": {
+    "banner_supplies": {
+      "url": "https://images.unsplash.com/photo-1672611500713-7f9b4693259d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxzY2hvb2wlMjBzdXBwbGllcyUyMGZsYXRsYXl8ZW58MHx8fHwxNzg5MzQwNjQyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "School supplies flatlay for promotional banner"
+    },
+    "product_notebook": {
+      "url": "https://images.unsplash.com/photo-1612367980327-7454a7276aa7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxzcGlyYWwlMjBub3RlYm9va3xlbnwwfHx8fDE3ODkzNDA2MzF8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Spiral register notebook"
+    },
+    "product_art_supplies": {
+      "url": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxhcnQlMjBwYWludGluZyUyMHN1cHBsaWVzfGVufDB8fHx8MTc4OTM0MDYzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Assorted paintbrushes and art supplies"
+    },
+    "product_gel_pens": {
+      "url": "https://images.unsplash.com/photo-1654608904845-7872f07475bc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwyfHxnZWwlMjBwZW5zfGVufDB8fHx8MTc4OTM0MDYzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Gel pens in a cup"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Follow '1 iOS-Native Clean' guidelines: maintain crisp layouts, generous spacing, and strict adherence to the emerald green and white palette. Blue and purple colors are completely banned.",
+    "Implement the Dynamic Sticky Header with an SLA Badge (e.g., '10 MINS' in brandPrimary text on brandSecondary bg). Tie a bottom sheet accordion to the location section.",
+    "The Predictive Search Bar must feature a rotating placeholder ticker (e.g., 'Search NCERT Class 10', 'Search Gel Pens') and a trailing voice icon.",
+    "Construct the Split-Screen Category Browse View carefully: 25% width sticky vertical sidebar for categories (selected category gets brandPrimary text/indicator) and 75% width for the 2-column product grid.",
+    "For product cards, build a morphing '+ ADD' button. It should start as an 'ADD' pill and morph into a quantity stepper (-, count, +) on tap to satisfy Fitts' Law and quick commerce UX patterns.",
+    "Build a Floating Persistent Cart Tray. It must float above the bottom navigation, utilize glassmorphism (expo-blur), and show stacked item avatars, total price, and a checkout CTA.",
+    "Checkout Bottom Sheet must include tip chips, delivery instruction chips, a detailed bill breakdown, and a simulated mock payment gateway.",
+    "Research Learning: Quick commerce interfaces prioritize speed. Consolidate visual noise, ensure essential details like price and quantity are immediately visible, and utilize white space to separate products from promos.",
+    "Implement the Live Order Tracking screen with an animated map and a 4-stage vertical step progress indicator. Use 'success' or 'brandPrimary' colors to indicate completed steps.",
+    "Wire up haptics defined in the 'haptics' section for interactions like adding to cart, incrementing quantity, and tab switching."
+  ]
+}
