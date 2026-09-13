@@ -1,14 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import dayjs from "dayjs";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
 import { api } from "@/src/lib/api";
+import { useCart } from "@/src/context/CartContext";
+import { ADDRESS_ICONS, useAddress } from "@/src/context/AddressContext";
+import { StreakCard } from "@/src/components/StreakRewards";
 
 const ROWS = [
-  { icon: "location" as const, label: "Manage Addresses" },
   { icon: "help-circle" as const, label: "Help & Support" },
   { icon: "gift" as const, label: "Refer & Earn" },
   { icon: "document-text" as const, label: "Terms & Privacy" },
@@ -17,7 +21,30 @@ const ROWS = [
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { addMany } = useCart();
+  const { selected: address, addresses, openSheet } = useAddress();
   const orders = useQuery({ queryKey: ["orders"], queryFn: api.orders });
+  const [reordering, setReordering] = useState<string | null>(null);
+  const [reorderError, setReorderError] = useState<string | null>(null);
+
+  const reorder = async (orderId: string) => {
+    setReordering(orderId);
+    setReorderError(null);
+    try {
+      const res = await api.reorderItems(orderId);
+      if (res.items.length === 0) {
+        setReorderError("Those items are out of stock right now");
+        return;
+      }
+      addMany(res.items);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      router.push("/checkout");
+    } catch {
+      setReorderError("Couldn't reorder. Try again.");
+    } finally {
+      setReordering(null);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -35,31 +62,94 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Recent Orders</Text>
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <StreakCard compact />
+        </View>
+
+        {/* Saved addresses */}
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Saved Addresses</Text>
+          <TouchableOpacity onPress={openSheet} testID="profile-manage-addresses">
+            <Text style={styles.link}>Manage</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}
+        >
+          {addresses.map((a) => {
+            const active = a.id === address?.id;
+            return (
+              <TouchableOpacity
+                key={a.id}
+                onPress={openSheet}
+                style={[styles.addrChip, active && styles.addrChipActive]}
+                testID={`profile-address-${a.label}`}
+              >
+                <Ionicons name={ADDRESS_ICONS[a.label]} size={14} color={active ? colors.onBrandPrimary : colors.brandPrimary} />
+                <View>
+                  <Text style={[styles.addrChipLabel, active && { color: colors.onBrandPrimary }]}>{a.label}</Text>
+                  <Text style={[styles.addrChipStreet, active && { color: colors.onBrandPrimary }]} numberOfLines={1}>
+                    {a.street}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity onPress={openSheet} style={styles.addrAdd} testID="profile-address-add">
+            <Ionicons name="add" size={18} color={colors.brandPrimary} />
+            <Text style={styles.addrAddText}>Add</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.lg, marginTop: spacing.lg }]}>Recent Orders</Text>
+        {reorderError && <Text style={styles.error}>{reorderError}</Text>}
         {orders.isLoading ? (
           <ActivityIndicator style={{ marginTop: spacing.lg }} color={colors.brandPrimary} />
         ) : orders.data && orders.data.length > 0 ? (
           <View style={{ paddingHorizontal: spacing.lg }}>
-            {orders.data.slice(0, 5).map((o: any) => (
-              <TouchableOpacity
-                key={o.id}
-                activeOpacity={0.85}
-                style={styles.orderRow}
-                onPress={() => router.push(`/tracking/${o.id}`)}
-                testID={`order-row-${o.id}`}
-              >
-                <View style={styles.orderIcon}>
-                  <Ionicons name="cube" size={20} color={colors.brandPrimary} />
+            {orders.data.slice(0, 5).map((o: any) => {
+              const itemCount = o.items.reduce((n: number, it: any) => n + it.quantity, 0);
+              return (
+                <View key={o.id} style={styles.orderRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={styles.orderMain}
+                    onPress={() => router.push(`/tracking/${o.id}`)}
+                    testID={`order-row-${o.id}`}
+                  >
+                    <View style={styles.orderIcon}>
+                      <Ionicons name="cube" size={20} color={colors.brandPrimary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderId}>Order #{o.id.slice(0, 8).toUpperCase()}</Text>
+                      <Text style={styles.orderMeta}>
+                        {itemCount} item{itemCount === 1 ? "" : "s"} • ₹{o.totalAmount.toFixed(0)} • {dayjs(o.createdAt).format("D MMM")}
+                      </Text>
+                      {o.streakDiscount > 0 && (
+                        <Text style={styles.orderReward}>Saved ₹{o.streakDiscount} with exam streak</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => reorder(o.id)}
+                    disabled={reordering !== null}
+                    style={styles.reorderBtn}
+                    testID={`reorder-btn-${o.id}`}
+                  >
+                    {reordering === o.id ? (
+                      <ActivityIndicator size="small" color={colors.brandPrimary} />
+                    ) : (
+                      <>
+                        <Ionicons name="refresh" size={14} color={colors.brandPrimary} />
+                        <Text style={styles.reorderText}>Reorder</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.orderId}>Order #{o.id.slice(0, 8).toUpperCase()}</Text>
-                  <Text style={styles.orderMeta}>
-                    {o.items.length} items • ₹{o.totalAmount.toFixed(0)} • {o.status}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         ) : (
           <View style={styles.empty}>
@@ -73,6 +163,11 @@ export default function ProfileScreen() {
         <View style={styles.divider} />
 
         <View style={styles.menu}>
+          <TouchableOpacity style={styles.menuRow} onPress={openSheet} testID="menu-Manage Addresses">
+            <Ionicons name="location" size={20} color={colors.brandPrimary} />
+            <Text style={styles.menuLabel}>Manage Addresses</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </TouchableOpacity>
           {ROWS.map((row) => (
             <TouchableOpacity key={row.label} style={styles.menuRow} testID={`menu-${row.label}`}>
               <Ionicons name={row.icon as any} size={20} color={colors.brandPrimary} />
@@ -115,22 +210,54 @@ const styles = StyleSheet.create({
   },
   editText: { color: colors.brandPrimary, fontWeight: "700", fontSize: 12 },
 
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.onSurface,
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: colors.onSurface, marginBottom: spacing.sm },
+  link: { fontSize: 13, fontWeight: "700", color: colors.brandPrimary, marginBottom: spacing.sm },
+
+  addrChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: spacing.md,
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxWidth: 200,
+  },
+  addrChipActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  addrChipLabel: { fontSize: 12, fontWeight: "800", color: colors.onSurface },
+  addrChipStreet: { fontSize: 11, color: colors.muted, maxWidth: 140 },
+  addrAdd: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.brandPrimary,
+  },
+  addrAddText: { fontSize: 12, fontWeight: "800", color: colors.brandPrimary },
+
+  error: { color: colors.error, fontSize: 12, fontWeight: "600", paddingHorizontal: spacing.lg, marginBottom: spacing.xs },
   orderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  orderMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md },
   orderIcon: {
     width: 40,
     height: 40,
@@ -141,6 +268,21 @@ const styles = StyleSheet.create({
   },
   orderId: { fontSize: 14, fontWeight: "700", color: colors.onSurface },
   orderMeta: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  orderReward: { fontSize: 11, color: colors.brandPrimary, fontWeight: "700", marginTop: 2 },
+  reorderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 34,
+    minWidth: 88,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.brandPrimary,
+    backgroundColor: colors.brandTertiary,
+  },
+  reorderText: { fontSize: 12, fontWeight: "800", color: colors.brandPrimary },
 
   empty: {
     alignItems: "center",

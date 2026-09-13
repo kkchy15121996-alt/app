@@ -10,6 +10,8 @@ import { Asset } from "expo-asset";
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { queryClient } from "@/src/query-client";
 import { CartProvider } from "@/src/context/CartContext";
+import { AddressProvider } from "@/src/context/AddressContext";
+import { AddressSheet } from "@/src/components/AddressSheet";
 
 LogBox.ignoreAllLogs(true);
 
@@ -34,18 +36,21 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <CartProvider>
-              <StatusBar style="dark" />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen
-                  name="checkout"
-                  options={{ presentation: "modal", animation: "slide_from_bottom" }}
-                />
-                <Stack.Screen
-                  name="tracking/[orderId]"
-                  options={{ animation: "slide_from_right" }}
-                />
-              </Stack>
+              <AddressProvider>
+                <StatusBar style="dark" />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="checkout"
+                    options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                  />
+                  <Stack.Screen
+                    name="tracking/[orderId]"
+                    options={{ animation: "slide_from_right" }}
+                  />
+                </Stack>
+                <AddressSheet />
+              </AddressProvider>
             </CartProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

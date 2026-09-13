@@ -12,9 +12,12 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
 import { useCart } from "@/src/context/CartContext";
+import { ADDRESS_ICONS, useAddress } from "@/src/context/AddressContext";
+import { useStreak } from "@/src/components/StreakRewards";
 import { QuantityStepper } from "@/src/components/QuantityStepper";
 import { api } from "@/src/lib/api";
 
@@ -37,6 +40,9 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { lines, totalCount, totalPrice, addOne, removeOne, clear } = useCart();
+  const { selected: address, openSheet } = useAddress();
+  const streak = useStreak();
+  const qc = useQueryClient();
 
   const [selectedInstructions, setSelectedInstructions] = useState<string[]>([]);
   const [tip, setTip] = useState(0);
@@ -46,7 +52,19 @@ export default function CheckoutScreen() {
 
   const handlingFee = 9;
   const deliveryCharge = totalPrice >= 199 ? 0 : 25;
-  const grandTotal = totalPrice + handlingFee + deliveryCharge + tip;
+
+  // Streak reward: % off study-supply items when ordering before the scheduled exam date
+  const reward = streak.data;
+  const studySubtotal = useMemo(() => {
+    if (!reward?.active) return 0;
+    return Object.values(lines).reduce(
+      (sum, l) => (reward.studyCategories.includes(l.product.category) ? sum + l.quantity * l.product.salePrice : sum),
+      0,
+    );
+  }, [lines, reward]);
+  const streakDiscount = reward?.active && studySubtotal > 0 ? Math.round((studySubtotal * reward.discountPercent) / 100) : 0;
+
+  const grandTotal = totalPrice + handlingFee + deliveryCharge + tip - streakDiscount;
 
   const toggleInstruction = (id: string) => {
     Haptics.selectionAsync().catch(() => {});
@@ -62,10 +80,10 @@ export default function CheckoutScreen() {
       const payload = {
         userId: "guest",
         deliveryAddress: {
-          street: "Home - Swaroop Nagar, Delhi",
-          pincode: "110042",
-          lat: 28.7085,
-          lng: 77.1930,
+          street: address ? `${address.label} - ${address.street}${address.landmark ? `, ${address.landmark}` : ""}` : "Home - Swaroop Nagar, Delhi",
+          pincode: address?.pincode ?? "110042",
+          lat: address?.lat ?? 28.7085,
+          lng: address?.lng ?? 77.1930,
           instructions: selectedInstructions,
         },
         items: Object.values(lines).map((l) => ({
@@ -75,12 +93,15 @@ export default function CheckoutScreen() {
         })),
         tipAmount: tip,
         handlingFee,
+        streakDiscount,
         totalAmount: Number(grandTotal.toFixed(2)),
         paymentMethod: method,
       };
       const res = await api.createOrder(payload);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       clear();
+      qc.invalidateQueries({ queryKey: ["streak"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
       setPaymentOpen(false);
       router.replace(`/tracking/${res.orderId}`);
     } catch (e) {
@@ -101,7 +122,7 @@ export default function CheckoutScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Your Cart</Text>
-          <Text style={styles.headerSub}>Delivery to Home in 11 mins</Text>
+          <Text style={styles.headerSub}>Delivery to {address?.label ?? "Home"} in 11 mins</Text>
         </View>
       </View>
 
@@ -139,6 +160,34 @@ export default function CheckoutScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Delivery address (one-tap switch) */}
+            <TouchableOpacity activeOpacity={0.85} onPress={openSheet} style={styles.card} testID="checkout-address-card">
+              <View style={styles.rowBetween}>
+                <View style={styles.addrIcon}>
+                  <Ionicons name={address ? ADDRESS_ICONS[address.label] : "location"} size={18} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1, marginLeft: spacing.md }}>
+                  <Text style={styles.cardTitle}>Delivering to {address?.label ?? "…"}</Text>
+                  <Text style={styles.cardSub} numberOfLines={2}>
+                    {address ? `${address.street}${address.landmark ? `, ${address.landmark}` : ""} • ${address.pincode}` : "Select a saved address"}
+                  </Text>
+                </View>
+                <Text style={styles.changeText}>CHANGE</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Streak reward banner */}
+            {reward?.active && (
+              <View style={[styles.card, styles.rewardCard]} testID="checkout-streak-banner">
+                <Ionicons name="flame" size={18} color={colors.brandPrimary} />
+                <Text style={styles.rewardText}>
+                  {streakDiscount > 0
+                    ? `Exam streak: ${reward.discountPercent}% off study supplies applied (−₹${streakDiscount})`
+                    : `Add study supplies to get ${reward.discountPercent}% off before ${reward.examName}`}
+                </Text>
+              </View>
+            )}
 
             {/* Items list */}
             <Text style={styles.sectionTitle}>{totalCount} items in cart</Text>
@@ -236,6 +285,13 @@ export default function CheckoutScreen() {
                 valueColor={deliveryCharge === 0 ? colors.brandPrimary : colors.onSurface}
               />
               {tip > 0 && <BillRow label="Delivery tip" value={`₹${tip}`} />}
+              {streakDiscount > 0 && (
+                <BillRow
+                  label={`Exam streak discount (${reward?.discountPercent}%)`}
+                  value={`−₹${streakDiscount}`}
+                  valueColor={colors.brandPrimary}
+                />
+              )}
               <View style={styles.billDivider} />
               <BillRow label="Grand Total" value={`₹${grandTotal.toFixed(0)}`} bold />
             </View>
@@ -377,6 +433,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   slaText: { fontSize: 10, fontWeight: "800", color: colors.brandPrimary, letterSpacing: 0.3 },
+  addrIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brandSecondary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  changeText: { fontSize: 11, fontWeight: "800", color: colors.brandPrimary, letterSpacing: 0.3 },
+  rewardCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.brandTertiary,
+    borderWidth: 1,
+    borderColor: colors.brandSecondary,
+  },
+  rewardText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.onBrandTertiary },
 
   sectionTitle: {
     fontSize: 13,

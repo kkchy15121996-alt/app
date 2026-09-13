@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 2 (Addresses / Bulk Kits / Reorder / Streak Rewards) fully tested. Backend: 15/15 new pytests pass (test_kapa_iteration2.py) covering address CRUD (create, select, delete, seeded Home, last-address 400, 5-digit pincode 422), 6 school kits with resolved product objects + savings, streak lifecycle (inactive->PUT future date active 3%->order applies discount + increments streak->GET reflects streak+1 -> DELETE clears), reorder-items for real and unknown orders. Frontend end-to-end: Home header shows 'Home - B-42, Swaroop Nagar'; Address sheet add Hostel (110007) auto-switches header; row-tap switches back to Home; delete Hostel works. Kit-class10 ADD toggles button to ADDED and floating cart shows 7 items; Kit-card-class6 opens detail sheet with items+savings and kit-sheet-add-btn navigates to /checkout with all items. Streak card sets CBSE Boards +30d -> shows '4% off study supplies • 1-order streak' (baseline was 1-order streak carried from backend tests, so 4% instead of a fresh 3%; behaviour is correct). Checkout renders checkout-streak-banner ('Exam streak: 4% off study supplies applied (-Rs.75)'), bill row 'Exam streak discount (4%)', proceed-to-pay UPI succeeds and navigates to /tracking; streak then increments to 2 (5%). Profile: Home chip + Manage opens address sheet; Recent Orders each have a Reorder button; tap fills cart (28 line items after class-10 reorder) and opens /checkout; order rows show 'Saved Rs.75 with exam streak' when applicable. Checkout 'CHANGE' on checkout-address-card opens address sheet. No red screens; only pre-existing shadow*/pointerEvents deprecation warnings still logged.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/v1/addresses/{id}/select", "issue": "Selecting an address does not scope the un-set of others to just that user (`update_many({userId})` is scoped) - OK; but the follow-up `update_one({id})` omits userId in the filter (server.py:469). Not exploitable with guest-only setup but should include userId for safety."},
+      {"endpoint": "POST /api/v1/addresses", "issue": "Pydantic Field(min_length=6, max_length=6) will 422 both '11007' (5 digits) and non-digit strings; explicit .isdigit() check afterwards is unreachable for length!=6. Fine, just noting the code is slightly redundant (server.py:449-450)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home", "issues": ["Streak card shows '4% off study supplies • 1-order streak' initially because streak counter persisted from backend pytest run (server does not reset streak on DELETE /rewards/exam-date). If PM wants a truly fresh baseline '3%' on first visit, consider resetting `streak` in DELETE /rewards/exam-date. Otherwise this is intended (streak survives exam cycle)."]}
+    ],
+    "react_native_issues": [
+      {"component": "StyleSheet - shadow props", "issue": "Still logging: '\"shadow*\" style props are deprecated. Use \"boxShadow\"'. Same as iteration_1; no new offenders introduced by the address/kit/streak components."},
+      {"component": "props.pointerEvents", "issue": "Still logging: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Same as iteration_1."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kapa_iteration2.py",
+    "/app/test_reports/pytest/iteration2_results.xml"
+  ],
+  "action_items": [
+    "Consider adding `\"streak\": 0` to the $set in DELETE /api/v1/rewards/exam-date if you want the Home card to fall back to the base 3% after cancelling an exam.",
+    "Add userId filter to the second update_one in PUT /addresses/{id}/select (server.py:469).",
+    "Still open from iteration_1: migrate shadow* -> boxShadow, pointerEvents prop -> style.pointerEvents, audit Reanimated shared-value reads."
+  ],
+  "critical_code_review_comments": [
+    "server.py: create_order trusts payload.totalAmount when computing deliveryCharge and returns it verbatim - server should recompute grandTotal = itemTotal + handlingFee + tipAmount + deliveryCharge - streakDiscount and validate the client's number.",
+    "server.py: STUDY_CATEGORIES is a module-level set - fine; but `build_streak_status` mutates exam_date locally to None on ValueError instead of raising; acceptable since the setter validates.",
+    "AddressSheet.tsx (line 469 of server): PUT select does update_many by userId (ok) but the following update_one({id}) is not userId-scoped - see backend minor.",
+    "SchoolKits.tsx / StreakRewards.tsx / AddressSheet.tsx are well under 700 lines each and use testID consistently - good.",
+    "Frontend uses process.env.EXPO_PUBLIC_BACKEND_URL and no hardcoded URLs - good.",
+    "All list-return endpoints properly project out `_id` - good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kapa_iteration2.py (new - 15 pytests)",
+    "/app/test_reports/pytest/iteration2_results.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (15/15 new + 13/13 iteration_1 still passing)", "frontend": "100% of tested flows (Address CRUD, Kit ADD, Kit detail + navigate, Streak activate + discount + tracking, Profile addresses + reorder, Checkout CHANGE)"},
+  "seed_data_creation": "Tests use auto-seeded Home address, 6 kits, 38 products. Test-created data (Hostel address, TEST_ orders, streak state) is cleaned in the TestZZCleanup class at end of the pytest module. Note: after the FRONTEND session, a couple of demo orders remain under userId='guest' and the streak counter is now 2 (exam date cleared). Streak counter is intentionally not zeroed on DELETE /rewards/exam-date - see action item.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reusable pytests: /app/backend/tests/test_kapa_api.py (iter 1) + /app/backend/tests/test_kapa_iteration2.py (this iter). All routes are /api/v1/*, guest userId. Address labels are Literal['Home','Office','Hostel','Other'] - use exactly. Streak percent = min(3+streak, 10); only categories in STUDY_CATEGORIES qualify: cat-ncert, cat-registers, cat-pens, cat-exam, cat-geometry, cat-art. Kit-class10 has 7 items and contains NCERT+CBSE (all study), Kit-class6 has 6 items (registers/pens/art/lunch). Checkout streak banner testID = checkout-streak-banner, address change card = checkout-address-card.",
+  "rca_of_issue": "N/A - iteration 2 features all pass. Only stylistic RN deprecation warnings (already reported in iter 1) and one minor UX consideration around whether streak should reset on exam cancel."
+}

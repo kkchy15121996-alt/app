@@ -27,6 +27,9 @@ import { colors, radius, spacing } from "@/src/theme";
 import { api } from "@/src/lib/api";
 import { ProductCard } from "@/src/components/ProductCard";
 import { useCart } from "@/src/context/CartContext";
+import { useAddress } from "@/src/context/AddressContext";
+import { SchoolKitsSection } from "@/src/components/SchoolKits";
+import { StreakCard } from "@/src/components/StreakRewards";
 
 const { width } = Dimensions.get("window");
 const BANNER_WIDTH = width - spacing.lg * 2;
@@ -174,6 +177,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { totalCount } = useCart();
+  const { selected: address, openSheet } = useAddress();
 
   const store = useQuery({ queryKey: ["nearest"], queryFn: api.nearestStore });
   const cats = useQuery({ queryKey: ["categories"], queryFn: api.categories });
@@ -190,11 +194,11 @@ export default function HomeScreen() {
             <PulsingDot />
             <Text style={styles.slaText}>{store.data?.slaMinutes ?? "10-12 MINS"}</Text>
           </View>
-          <TouchableOpacity style={styles.locationBtn} testID="location-selector">
+          <TouchableOpacity style={styles.locationBtn} onPress={openSheet} testID="location-selector">
             <Text style={styles.locationLabel}>Delivery to</Text>
             <View style={styles.locationRow}>
               <Text style={styles.locationText} numberOfLines={1}>
-                Home - Swaroop Nagar, Delhi
+                {address ? `${address.label} - ${address.street}` : "Select address"}
               </Text>
               <Ionicons name="chevron-down" size={16} color={colors.onSurface} />
             </View>
@@ -223,6 +227,11 @@ export default function HomeScreen() {
           <BannerCarousel />
         </View>
 
+        {/* Exam streak rewards */}
+        <View style={{ marginTop: spacing.lg, paddingHorizontal: spacing.lg }}>
+          <StreakCard />
+        </View>
+
         {/* Categories 4x2 grid */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Shop by Category</Text>
@@ -241,6 +250,11 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </View>
+        </View>
+
+        {/* Bulk school kits */}
+        <View style={styles.section}>
+          <SchoolKitsSection />
         </View>
 
         {/* Featured products */}

@@ -101,3 +101,113 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+user_problem_statement: "Kapa Learning quick-commerce app. New features this iteration: (1) Address Sheet - save Home/Office/Hostel/Other addresses, one-tap switch; (2) Bulk School Kits - class-wise combo packs added to cart in one tap; (3) Reorder in a Tap on past orders; (4) Streak Rewards - % discount on study supplies when ordering before a scheduled exam date."
+
+backend:
+  - task: "Addresses CRUD (GET/POST /api/v1/addresses, PUT /{id}/select, DELETE /{id})"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Seeded default Home address for guest; delete blocked when only 1 address."
+  - task: "School kits (GET /api/v1/kits, /kits/{id}) with resolved products + kitPrice/savings"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "6 kits seeded."
+  - task: "Reorder items (GET /api/v1/orders/{id}/reorder-items)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns items with current product + qty clamped to stock."
+  - task: "Streak rewards (GET /rewards/streak, PUT/DELETE /rewards/exam-date, discount applied in POST /orders/create)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Discount = min(3+streak,10)% of study-category subtotal; streak increments per qualifying order; exam date must be today/future (server date is 2026-09-13)."
+
+frontend:
+  - task: "Address sheet (home header, checkout CHANGE, profile Manage) - select/add/delete"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AddressSheet.tsx, /app/frontend/src/context/AddressContext.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "testIDs: location-selector, address-add-new-btn, address-label-*, address-street-input, address-pincode-input, address-save-btn, address-row-<Label>, checkout-address-card"
+  - task: "School kits section on Home + kit detail sheet + ADD KIT"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/SchoolKits.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "testIDs: kit-card-<id>, kit-add-<id>, kit-sheet-add-btn"
+  - task: "Reorder button on profile past orders"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "testID reorder-btn-<orderId>; fills cart and navigates to /checkout"
+  - task: "Streak card + exam date sheet + checkout discount line"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/StreakRewards.tsx, /app/frontend/app/checkout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "testIDs: streak-card, exam-name-input, exam-quick-7, exam-date-input, exam-save-btn, checkout-streak-banner"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.1"
+  test_sequence: 2
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "All 4 new features backend + frontend"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented 4 features. Please test backend endpoints then UI flows on web preview at phone viewport."

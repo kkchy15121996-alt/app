@@ -80,6 +80,60 @@ class OrderPayload(BaseModel):
     handlingFee: float = 9
     totalAmount: float
     paymentMethod: Literal["UPI", "CARD", "COD"]
+    streakDiscount: float = 0
+
+
+class AddressPayload(BaseModel):
+    userId: str = "guest"
+    label: Literal["Home", "Office", "Hostel", "Other"]
+    street: str = Field(min_length=3)
+    landmark: str = ""
+    pincode: str = Field(min_length=6, max_length=6)
+    lat: float = 28.7085
+    lng: float = 77.1930
+
+
+class ExamDatePayload(BaseModel):
+    userId: str = "guest"
+    examName: str = Field(min_length=2)
+    examDate: str  # YYYY-MM-DD
+
+
+STUDY_CATEGORIES = {"cat-ncert", "cat-registers", "cat-pens", "cat-exam", "cat-geometry", "cat-art"}
+STREAK_BASE_PERCENT = 3
+STREAK_MAX_PERCENT = 10
+
+
+def streak_percent(streak: int) -> int:
+    return min(STREAK_BASE_PERCENT + streak, STREAK_MAX_PERCENT)
+
+
+def build_streak_status(doc: Optional[dict]) -> dict:
+    streak = doc.get("streak", 0) if doc else 0
+    exam_name = doc.get("examName") if doc else None
+    exam_date = doc.get("examDate") if doc else None
+    days_left = None
+    active = False
+    if exam_date:
+        today = datetime.now(timezone.utc).date()
+        try:
+            d = datetime.strptime(exam_date, "%Y-%m-%d").date()
+            days_left = (d - today).days
+            active = days_left >= 0
+        except ValueError:
+            exam_date = None
+    return {
+        "examName": exam_name,
+        "examDate": exam_date,
+        "daysLeft": days_left,
+        "streak": streak,
+        "active": active,
+        "discountPercent": streak_percent(streak) if active else 0,
+        "potentialPercent": streak_percent(streak),
+        "nextDiscountPercent": streak_percent(streak + 1),
+        "maxPercent": STREAK_MAX_PERCENT,
+        "studyCategories": sorted(STUDY_CATEGORIES),
+    }
 
 
 class OrderRecord(BaseModel):
@@ -174,7 +228,66 @@ PRODUCTS_SEED = [
 ]
 
 
+KITS_SEED = [
+    {
+        "id": "kit-junior", "grade": "Class 1-3", "title": "Junior Starter Kit",
+        "tagline": "Four-line registers, crayons & a leakproof lunch box", "color": "#FDE68A",
+        "image": "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400",
+        "items": [["REG-4L-100", 3], ["PEN-PC-10", 1], ["ART-OP-24", 1], ["ART-SP-A4", 1], ["LUN-BOX", 1], ["LUN-SP", 1]],
+    },
+    {
+        "id": "kit-class6", "grade": "Class 6", "title": "Middle School Essentials",
+        "tagline": "Registers, pens, geometry box & water bottle", "color": "#BBF7D0",
+        "image": "https://images.unsplash.com/photo-1612367980327-7454a7276aa7?w=400",
+        "items": [["REG-ND-3S", 1], ["PEN-CE-BK10", 1], ["PEN-PC-10", 1], ["GEO-CAM", 1], ["ART-CR-48", 1], ["LUN-BT-750", 1]],
+    },
+    {
+        "id": "kit-class8", "grade": "Class 8", "title": "Class 8 Complete Kit",
+        "tagline": "Spiral registers, highlighters, maths square register & more", "color": "#BFDBFE",
+        "image": "https://images.unsplash.com/photo-1568871391327-04b30d5f9d1e?w=400",
+        "items": [["REG-CM-S5", 1], ["REG-MSQ", 1], ["PEN-RB-BL5", 1], ["PEN-HL-5C", 1], ["GEO-CAM", 1], ["ART-WC-24", 1]],
+    },
+    {
+        "id": "kit-class10", "grade": "Class 10", "title": "Board Exam Power Pack",
+        "tagline": "All 4 NCERT textbooks + CBSE sample papers + registers", "color": "#FED7AA",
+        "image": "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
+        "items": [["NCERT-M10", 1], ["NCERT-S10", 1], ["NCERT-E10", 1], ["NCERT-SST10", 1], ["EXM-CBSE10", 1], ["REG-CM-S5", 1], ["PEN-RB-BL5", 1]],
+    },
+    {
+        "id": "kit-class12", "grade": "Class 12", "title": "Class 12 Science Kit",
+        "tagline": "Exemplar physics, long registers, compass & gel pens", "color": "#DDD6FE",
+        "image": "https://images.unsplash.com/photo-1532153259564-a5f24f261f51?w=400",
+        "items": [["NCERT-EXP12", 1], ["REG-HB-LT", 2], ["PEN-RB-BL5", 1], ["PEN-HL-5C", 1], ["GEO-STD", 1]],
+    },
+    {
+        "id": "kit-upsc", "grade": "UPSC", "title": "UPSC Aspirant Kit",
+        "tagline": "Prelims mocks, 3 hardbound registers, sticky notes", "color": "#FBCFE8",
+        "image": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400",
+        "items": [["EXM-UPSC-P", 1], ["REG-HB-LT", 3], ["PEN-CE-BK10", 1], ["PEN-HL-5C", 1], ["OFF-STK", 1]],
+    },
+]
+
+DEFAULT_ADDRESS = {
+    "userId": "guest",
+    "label": "Home",
+    "street": "B-42, Swaroop Nagar",
+    "landmark": "Near Kapa Dark Store",
+    "pincode": "110042",
+    "lat": 28.7085,
+    "lng": 77.1930,
+    "isDefault": True,
+}
+
+
 async def seed_db():
+    if await db.kits.count_documents({}) == 0:
+        await db.kits.insert_many([dict(k) for k in KITS_SEED])
+        logger.info("Seeded school kits")
+
+    if await db.addresses.count_documents({"userId": "guest"}) == 0:
+        await db.addresses.insert_one({"id": str(uuid.uuid4()), **DEFAULT_ADDRESS, "createdAt": datetime.now(timezone.utc).isoformat()})
+        logger.info("Seeded default guest address")
+
     if await db.categories.count_documents({}) == 0:
         await db.categories.insert_many(CATEGORIES)
         logger.info("Seeded categories")
@@ -276,6 +389,28 @@ async def sync_cart(payload: CartSyncRequest):
 async def create_order(payload: OrderPayload):
     order_id = str(uuid.uuid4())
     delivery_charge = 0 if payload.totalAmount >= 199 else 25
+
+    # Streak reward: discount on study supplies when ordering before a scheduled exam date
+    reward_doc = await db.rewards.find_one({"userId": payload.userId}, {"_id": 0})
+    status = build_streak_status(reward_doc)
+    study_subtotal = 0.0
+    if status["active"] and payload.items:
+        ids = [i.productId for i in payload.items]
+        prods = await db.products.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "category": 1, "salePrice": 1}).to_list(500)
+        cat_by_id = {p["id"]: p for p in prods}
+        for it in payload.items:
+            p = cat_by_id.get(it.productId)
+            if p and p["category"] in STUDY_CATEGORIES:
+                study_subtotal += it.quantity * p["salePrice"]
+    streak_applied = status["active"] and study_subtotal > 0
+    streak_discount = round(study_subtotal * status["discountPercent"] / 100) if streak_applied else 0
+    new_streak = status["streak"] + 1 if streak_applied else status["streak"]
+    if streak_applied:
+        await db.rewards.update_one(
+            {"userId": payload.userId},
+            {"$set": {"streak": new_streak, "lastOrderAt": datetime.now(timezone.utc).isoformat()}},
+        )
+
     order_doc = {
         "id": order_id,
         "userId": payload.userId,
@@ -283,6 +418,8 @@ async def create_order(payload: OrderPayload):
         "tipAmount": payload.tipAmount,
         "handlingFee": payload.handlingFee,
         "deliveryCharge": delivery_charge,
+        "streakDiscount": streak_discount,
+        "streakDiscountPercent": status["discountPercent"] if streak_applied else 0,
         "totalAmount": payload.totalAmount,
         "paymentMethod": payload.paymentMethod,
         "address": payload.deliveryAddress.dict(),
@@ -292,7 +429,157 @@ async def create_order(payload: OrderPayload):
     }
     await db.orders.insert_one(order_doc.copy())
     order_doc.pop("_id", None)
-    return {"orderId": order_id, "paymentIntent": {"status": "success", "method": payload.paymentMethod}, "order": order_doc}
+    return {
+        "orderId": order_id,
+        "paymentIntent": {"status": "success", "method": payload.paymentMethod},
+        "order": order_doc,
+        "reward": {"applied": streak_applied, "discount": streak_discount, "streak": new_streak,
+                   "nextDiscountPercent": streak_percent(new_streak)},
+    }
+
+
+# ---------- Addresses ----------
+@api_router.get("/v1/addresses")
+async def list_addresses(userId: str = "guest"):
+    return await db.addresses.find({"userId": userId}, {"_id": 0}).sort("createdAt", 1).to_list(50)
+
+
+@api_router.post("/v1/addresses", status_code=201)
+async def create_address(payload: AddressPayload):
+    if not payload.pincode.isdigit():
+        raise HTTPException(status_code=422, detail="Pincode must be 6 digits")
+    existing = await db.addresses.count_documents({"userId": payload.userId})
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.dict(),
+        "isDefault": existing == 0,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.addresses.insert_one(doc.copy())
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/v1/addresses/{addressId}/select")
+async def select_address(addressId: str, userId: str = "guest"):
+    target = await db.addresses.find_one({"id": addressId, "userId": userId}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Address not found")
+    await db.addresses.update_many({"userId": userId}, {"$set": {"isDefault": False}})
+    await db.addresses.update_one({"id": addressId, "userId": userId}, {"$set": {"isDefault": True}})
+    target["isDefault"] = True
+    return target
+
+
+@api_router.delete("/v1/addresses/{addressId}")
+async def delete_address(addressId: str, userId: str = "guest"):
+    target = await db.addresses.find_one({"id": addressId, "userId": userId}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Address not found")
+    if await db.addresses.count_documents({"userId": userId}) <= 1:
+        raise HTTPException(status_code=400, detail="You need at least one saved address")
+    await db.addresses.delete_one({"id": addressId})
+    if target.get("isDefault"):
+        first = await db.addresses.find_one({"userId": userId}, {"_id": 0}, sort=[("createdAt", 1)])
+        if first:
+            await db.addresses.update_one({"id": first["id"]}, {"$set": {"isDefault": True}})
+    return {"deleted": addressId}
+
+
+# ---------- School Kits ----------
+async def resolve_kit(kit: dict) -> dict:
+    skus = [sku for sku, _ in kit["items"]]
+    prods = await db.products.find({"sku": {"$in": skus}}, {"_id": 0}).to_list(100)
+    by_sku = {p["sku"]: p for p in prods}
+    items = []
+    mrp_total = 0.0
+    kit_price = 0.0
+    for sku, qty in kit["items"]:
+        p = by_sku.get(sku)
+        if not p:
+            continue
+        items.append({"product": p, "quantity": qty})
+        mrp_total += p["mrp"] * qty
+        kit_price += p["salePrice"] * qty
+    return {
+        "id": kit["id"],
+        "grade": kit["grade"],
+        "title": kit["title"],
+        "tagline": kit["tagline"],
+        "color": kit["color"],
+        "image": kit["image"],
+        "items": items,
+        "itemCount": sum(i["quantity"] for i in items),
+        "mrpTotal": round(mrp_total),
+        "kitPrice": round(kit_price),
+        "savings": round(mrp_total - kit_price),
+    }
+
+
+@api_router.get("/v1/kits")
+async def list_kits():
+    kits = await db.kits.find({}, {"_id": 0}).to_list(50)
+    return [await resolve_kit(k) for k in kits]
+
+
+@api_router.get("/v1/kits/{kitId}")
+async def get_kit(kitId: str):
+    kit = await db.kits.find_one({"id": kitId}, {"_id": 0})
+    if not kit:
+        raise HTTPException(status_code=404, detail="Kit not found")
+    return await resolve_kit(kit)
+
+
+# ---------- Reorder ----------
+@api_router.get("/v1/orders/{orderId}/reorder-items")
+async def reorder_items(orderId: str):
+    order = await db.orders.find_one({"id": orderId}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    ids = [i["productId"] for i in order["items"]]
+    prods = await db.products.find({"id": {"$in": ids}}, {"_id": 0}).to_list(500)
+    by_id = {p["id"]: p for p in prods}
+    items = []
+    unavailable = []
+    for it in order["items"]:
+        p = by_id.get(it["productId"])
+        if not p or p["stockQuantity"] <= 0:
+            unavailable.append(it["productId"])
+            continue
+        items.append({"product": p, "quantity": min(it["quantity"], p["stockQuantity"])})
+    return {"orderId": orderId, "items": items, "unavailableCount": len(unavailable)}
+
+
+# ---------- Streak Rewards ----------
+@api_router.get("/v1/rewards/streak")
+async def get_streak(userId: str = "guest"):
+    doc = await db.rewards.find_one({"userId": userId}, {"_id": 0})
+    return build_streak_status(doc)
+
+
+@api_router.put("/v1/rewards/exam-date")
+async def set_exam_date(payload: ExamDatePayload):
+    try:
+        d = datetime.strptime(payload.examDate, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="examDate must be YYYY-MM-DD")
+    if d < datetime.now(timezone.utc).date():
+        raise HTTPException(status_code=422, detail="Exam date must be today or in the future")
+    await db.rewards.update_one(
+        {"userId": payload.userId},
+        {"$set": {"examName": payload.examName.strip(), "examDate": payload.examDate},
+         "$setOnInsert": {"streak": 0, "userId": payload.userId}},
+        upsert=True,
+    )
+    doc = await db.rewards.find_one({"userId": payload.userId}, {"_id": 0})
+    return build_streak_status(doc)
+
+
+@api_router.delete("/v1/rewards/exam-date")
+async def clear_exam_date(userId: str = "guest"):
+    await db.rewards.update_one({"userId": userId}, {"$unset": {"examName": "", "examDate": ""}})
+    doc = await db.rewards.find_one({"userId": userId}, {"_id": 0})
+    return build_streak_status(doc)
 
 
 @api_router.get("/v1/orders/{orderId}/live-tracking")

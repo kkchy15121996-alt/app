@@ -39,6 +39,52 @@ export type DarkStore = {
 
 export type CartItem = { productId: string; quantity: number; unitPrice: number };
 
+export type AddressLabel = "Home" | "Office" | "Hostel" | "Other";
+
+export type Address = {
+  id: string;
+  userId: string;
+  label: AddressLabel;
+  street: string;
+  landmark: string;
+  pincode: string;
+  lat: number;
+  lng: number;
+  isDefault: boolean;
+  createdAt: string;
+};
+
+export type KitItem = { product: Product; quantity: number };
+
+export type Kit = {
+  id: string;
+  grade: string;
+  title: string;
+  tagline: string;
+  color: string;
+  image: string;
+  items: KitItem[];
+  itemCount: number;
+  mrpTotal: number;
+  kitPrice: number;
+  savings: number;
+};
+
+export type StreakStatus = {
+  examName: string | null;
+  examDate: string | null;
+  daysLeft: number | null;
+  streak: number;
+  active: boolean;
+  discountPercent: number;
+  potentialPercent: number;
+  nextDiscountPercent: number;
+  maxPercent: number;
+  studyCategories: string[];
+};
+
+export const USER_ID = "guest";
+
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -63,10 +109,31 @@ export const api = {
   },
   featured: () => request<Product[]>("/v1/products/featured"),
   createOrder: (payload: any) =>
-    request<{ orderId: string; paymentIntent: any; order: any }>("/v1/orders/create", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    request<{ orderId: string; paymentIntent: any; order: any; reward: { applied: boolean; discount: number; streak: number; nextDiscountPercent: number } }>(
+      "/v1/orders/create",
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
   tracking: (orderId: string) => request<any>(`/v1/orders/${orderId}/live-tracking`),
-  orders: () => request<any[]>(`/v1/orders`),
+  orders: () => request<any[]>(`/v1/orders?userId=${USER_ID}`),
+  reorderItems: (orderId: string) =>
+    request<{ orderId: string; items: KitItem[]; unavailableCount: number }>(`/v1/orders/${orderId}/reorder-items`),
+
+  addresses: () => request<Address[]>(`/v1/addresses?userId=${USER_ID}`),
+  createAddress: (payload: { label: AddressLabel; street: string; landmark: string; pincode: string }) =>
+    request<Address>("/v1/addresses", { method: "POST", body: JSON.stringify({ ...payload, userId: USER_ID }) }),
+  selectAddress: (id: string) =>
+    request<Address>(`/v1/addresses/${id}/select?userId=${USER_ID}`, { method: "PUT" }),
+  deleteAddress: (id: string) =>
+    request<{ deleted: string }>(`/v1/addresses/${id}?userId=${USER_ID}`, { method: "DELETE" }),
+
+  kits: () => request<Kit[]>("/v1/kits"),
+
+  streak: () => request<StreakStatus>(`/v1/rewards/streak?userId=${USER_ID}`),
+  setExamDate: (examName: string, examDate: string) =>
+    request<StreakStatus>("/v1/rewards/exam-date", {
+      method: "PUT",
+      body: JSON.stringify({ userId: USER_ID, examName, examDate }),
+    }),
+  clearExamDate: () =>
+    request<StreakStatus>(`/v1/rewards/exam-date?userId=${USER_ID}`, { method: "DELETE" }),
 };

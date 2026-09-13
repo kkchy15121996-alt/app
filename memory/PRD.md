@@ -15,7 +15,20 @@ Students, parents, teachers and small offices in Delhi NCR who need study/office
 - **Payment Sheet**: UPI (primary), Card, COD — mock success + haptic + navigation to tracking.
 - **Live Order Tracking**: Simulated route visual with faux street grid, animated rider marker moving along Bézier curve toward destination pin (pulsing red ring), 4-stage vertical step progress (Placed → Packed → Out for Delivery → Arrived) with completed/current dot styles, ETA card + rider info + call button.
 - **Print Store tab**: Placeholder services (Xerox, Colour Prints, Spiral Binding, Passport Photos, Scanning, Lamination) + upload document CTA.
-- **Profile tab**: Guest user card, recent orders list (tap to re-open tracking), menu rows (Addresses, Support, Refer & Earn, T&C).
+- **Profile tab**: Guest user card, exam-streak card, saved-address chips, recent orders list (tap to re-open tracking, **Reorder** button refills cart → checkout), menu rows (Manage Addresses opens sheet, Support, Refer & Earn, T&C).
+
+## v1.1 Features
+- **Address Sheet**: Save Home / Office / Hostel / Other addresses (street, landmark, 6-digit pincode). One-tap switch from Home header, checkout "CHANGE" card, or Profile. Selected address persists server-side (`isDefault`) and is used in the order payload. Cannot delete the last address.
+- **Bulk School Kits**: 6 curated class-wise combo packs (Class 1-3, 6, 8, 10, 12, UPSC) shown as a horizontal "School Kits by Class" rail on Home. "ADD KIT" adds every item in one tap; tapping the card opens a detail sheet (contents, kit total, MRP savings, "Add all N items to cart" → checkout).
+- **Reorder in a Tap**: Every past order in Profile has a Reorder button; it fetches current products/stock for that order, refills the cart and opens checkout.
+- **Streak Rewards**: Student schedules an exam (name + date via quick chips or DD/MM/YYYY). Every order containing study supplies (NCERT, registers, pens, exam kits, geometry, art) placed before that date gets `min(3 + streak, 10)%` off the study-supply subtotal and increments the streak. Shown on Home/Profile streak card, checkout banner + bill row, and order history ("Saved ₹X with exam streak").
+
+## Backend API additions (v1.1)
+- `GET/POST /api/v1/addresses`, `PUT /api/v1/addresses/{id}/select`, `DELETE /api/v1/addresses/{id}`
+- `GET /api/v1/kits`, `GET /api/v1/kits/{id}`
+- `GET /api/v1/orders/{id}/reorder-items`
+- `GET /api/v1/rewards/streak`, `PUT /api/v1/rewards/exam-date`, `DELETE /api/v1/rewards/exam-date`
+- `POST /api/v1/orders/create` now computes/stores `streakDiscount` and increments streak.
 
 ## Backend API (FastAPI + MongoDB — auto-seeded on startup)
 - `GET /api/v1/darkstore/nearest`

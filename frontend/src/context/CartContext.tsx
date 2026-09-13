@@ -13,6 +13,7 @@ type CartState = {
   addOne: (product: Product) => void;
   removeOne: (productId: string) => void;
   setQuantity: (productId: string, qty: number) => void;
+  addMany: (items: { product: Product; quantity: number }[]) => void;
   clear: () => void;
   quantityOf: (productId: string) => number;
 };
@@ -56,6 +57,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  /** Adds several products at once (kits / reorder), clamped to stock. */
+  const addMany = useCallback((items: { product: Product; quantity: number }[]) => {
+    setLines((prev) => {
+      const next = { ...prev };
+      items.forEach(({ product, quantity }) => {
+        const current = next[product.id]?.quantity ?? 0;
+        const qty = Math.min(current + quantity, product.stockQuantity);
+        if (qty > 0) next[product.id] = { product, quantity: qty };
+      });
+      return next;
+    });
+  }, []);
+
   const clear = useCallback(() => setLines({}), []);
 
   const quantityOf = useCallback((productId: string) => lines[productId]?.quantity ?? 0, [lines]);
@@ -76,6 +90,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     addOne,
     removeOne,
     setQuantity,
+    addMany,
     clear,
     quantityOf,
   };
