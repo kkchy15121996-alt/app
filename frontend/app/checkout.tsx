@@ -19,7 +19,7 @@ import { useCart } from "@/src/context/CartContext";
 import { ADDRESS_ICONS, useAddress } from "@/src/context/AddressContext";
 import { useStreak } from "@/src/components/StreakRewards";
 import { QuantityStepper } from "@/src/components/QuantityStepper";
-import { api } from "@/src/lib/api";
+import { api, imageUrl } from "@/src/lib/api";
 
 const INSTRUCTIONS = [
   { id: "avoid-call", label: "Avoid Calling", icon: "call" as const },
@@ -201,7 +201,7 @@ export default function CheckoutScreen() {
                   ]}
                 >
                   <Image
-                    source={{ uri: line.product.images[0] }}
+                    source={{ uri: imageUrl(line.product.images[0]) }}
                     style={styles.itemImg}
                     contentFit="cover"
                   />

@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { colors, radius, spacing } from "@/src/theme";
 import { QuantityStepper } from "@/src/components/QuantityStepper";
 import { useCart } from "@/src/context/CartContext";
-import type { Product } from "@/src/lib/api";
+import { imageUrl, type Product } from "@/src/lib/api";
 
 type Props = {
   product: Product;
@@ -28,7 +28,7 @@ export function ProductCard({ product, compact }: Props) {
           </View>
         )}
         <Image
-          source={{ uri: product.images[0] }}
+          source={{ uri: imageUrl(product.images[0]) }}
           style={styles.image}
           contentFit="cover"
           transition={200}
@@ -42,19 +42,21 @@ export function ProductCard({ product, compact }: Props) {
           {product.subtitle}
         </Text>
         <View style={styles.footer}>
-          <View style={styles.priceCol}>
-            <Text style={styles.price} numberOfLines={1}>₹{product.salePrice}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>₹{product.salePrice}</Text>
             {product.mrp > product.salePrice && (
-              <Text style={styles.mrp} numberOfLines={1}>₹{product.mrp}</Text>
+              <Text style={styles.mrp}>₹{product.mrp}</Text>
             )}
           </View>
-          <QuantityStepper
-            quantity={qty}
-            onAdd={() => addOne(product)}
-            onRemove={() => removeOne(product.id)}
-            size="sm"
-            testIDPrefix={`product-${product.sku}`}
-          />
+          <View style={styles.stepperRow}>
+            <QuantityStepper
+              quantity={qty}
+              onAdd={() => addOne(product)}
+              onRemove={() => removeOne(product.id)}
+              size="sm"
+              testIDPrefix={`product-${product.sku}`}
+            />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -106,15 +108,18 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginTop: spacing.sm,
-    gap: spacing.xs,
+    gap: 6,
   },
-  priceCol: {
-    flexShrink: 1,
-    minWidth: 0,
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  stepperRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   price: {
     fontSize: 15,

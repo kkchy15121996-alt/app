@@ -211,3 +211,76 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Implemented 4 features. Please test backend endpoints then UI flows on web preview at phone viewport."
+
+# ---- Iteration 4 (Admin Console + Live Polyline + price fix) ----
+backend:
+  - task: "Admin JWT auth (POST /api/admin/auth/login, GET /auth/me, PUT /auth/password)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/admin.py"
+    priority: "high"
+    needs_retesting: true
+  - task: "Admin products CRUD + move + featured/isActive; customer /v1/products sorted by sortOrder & hides inactive; /v1/products/featured uses featured flag"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/admin.py, /app/backend/server.py"
+    priority: "high"
+    needs_retesting: true
+  - task: "Admin classes CRUD + customer GET /api/v1/classes"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/admin.py"
+    priority: "high"
+    needs_retesting: true
+  - task: "Admin orders list + PUT /orders/{id}/status (dispatched overrides live-tracking stage)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/admin.py"
+    priority: "high"
+    needs_retesting: true
+  - task: "Upload (POST /api/admin/upload multipart) to Emergent Object Storage + public GET /api/files/{path}"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/admin.py, /app/backend/storage.py"
+    priority: "high"
+    needs_retesting: true
+  - task: "GET /api/v1/catalog/version bumps on every admin change (live sync)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    priority: "medium"
+    needs_retesting: true
+frontend:
+  - task: "Admin console /admin login + /admin/dashboard (Products, Classes, Orders tabs)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/admin/*, /app/frontend/src/admin/*"
+    priority: "high"
+    needs_retesting: true
+  - task: "Customer Classes tab"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/classes.tsx"
+    priority: "medium"
+    needs_retesting: true
+  - task: "Live catalog sync hook (polls version every 4s)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/useCatalogSync.ts"
+    priority: "high"
+    needs_retesting: true
+  - task: "Tracking screen SVG polyline + animated rider"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/tracking/[orderId].tsx"
+    priority: "medium"
+    needs_retesting: true
+  - task: "BUG FIX: product card price truncated to '...' in narrow Categories grid"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/ProductCard.tsx"
+    priority: "high"
+    needs_retesting: true
+agent_communication:
+  - agent: "main"
+    message: "Admin creds: admin@kapalearning.com / Kapa@Admin2026 (also in /app/memory/test_credentials.md)."

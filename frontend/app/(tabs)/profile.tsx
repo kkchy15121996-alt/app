@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,8 @@ export default function ProfileScreen() {
   const orders = useQuery({ queryKey: ["orders"], queryFn: api.orders });
   const [reordering, setReordering] = useState<string | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const reorder = async (orderId: string) => {
     setReordering(orderId);
@@ -177,7 +179,23 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={styles.footer}>Kapa Learning v1.0 • Made with ❤️ in Delhi</Text>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => {
+            // Hidden admin entry: tap the version footer 5 times
+            tapCount.current += 1;
+            if (tapTimer.current) clearTimeout(tapTimer.current);
+            if (tapCount.current >= 5) {
+              tapCount.current = 0;
+              router.push("/admin");
+              return;
+            }
+            tapTimer.current = setTimeout(() => (tapCount.current = 0), 1500);
+          }}
+          testID="profile-footer"
+        >
+          <Text style={styles.footer}>Kapa Learning v1.1 • Made with ❤️ in Delhi</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

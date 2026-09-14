@@ -7,6 +7,26 @@ const RAW_URL =
 
 export const API_BASE = `${RAW_URL.replace(/\/$/, "")}/api`;
 
+/** Resolves relative `/api/files/...` paths (admin uploads) to absolute URLs. */
+export function imageUrl(src?: string | null): string | undefined {
+  if (!src) return undefined;
+  return src.startsWith("/") ? `${RAW_URL.replace(/\/$/, "")}${src}` : src;
+}
+
+export type ClassSession = {
+  id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  description: string;
+  videoUrl: string;
+  videoType: "youtube" | "hls" | "none";
+  scheduledAt: string | null;
+  durationMinutes: number;
+  notes: { name: string; url: string }[];
+  isPublished: boolean;
+};
+
 export type Product = {
   id: string;
   sku: string;
@@ -127,6 +147,8 @@ export const api = {
     request<{ deleted: string }>(`/v1/addresses/${id}?userId=${USER_ID}`, { method: "DELETE" }),
 
   kits: () => request<Kit[]>("/v1/kits"),
+  classes: () => request<ClassSession[]>("/v1/classes"),
+  catalogVersion: () => request<{ version: number }>("/v1/catalog/version"),
 
   streak: () => request<StreakStatus>(`/v1/rewards/streak?userId=${USER_ID}`),
   setExamDate: (examName: string, examDate: string) =>

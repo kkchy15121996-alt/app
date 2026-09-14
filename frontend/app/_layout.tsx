@@ -48,6 +48,7 @@ export default function RootLayout() {
                     name="tracking/[orderId]"
                     options={{ animation: "slide_from_right" }}
                   />
+                  <Stack.Screen name="admin" options={{ animation: "fade" }} />
                 </Stack>
                 <AddressSheet />
               </AddressProvider>

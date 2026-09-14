@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 4 tested the new Admin Console (auth/products/classes/orders/uploads), the customer-facing Classes tab, live catalog sync via /api/v1/catalog/version polling, tracking polyline, hidden admin entry, FloatingCart empty-state fix, and the ProductCard price-truncation bug fix. Backend: 25 new pytests in /app/backend/tests/test_kapa_iteration4_admin.py plus the pre-existing 34 tests all pass (59/59) under the default pytest-xdist -n 2 --dist loadscope config. Frontend: manual Playwright drive at 390x844 verifies (a) no '…' truncation in narrow 2-col category grid, prices render as e.g. ₹189/₹240 fully; (b) admin login with wrong password shows error, correct creds route to /admin/dashboard, all three tabs and the product form open, logout returns to login; (c) new class published in admin appears on the customer Classes tab within 6.5s (polling working), class-card / player-close testIDs present; (d) live price change on NCERT-M10 (₹189→₹186) surfaced on Home in <7.5s without reload; (e) tracking screen for a live guest order renders SVG polyline with rider-marker/store-pin/destination-pin; (f) 5 taps on profile-footer navigates to /admin; (g) FloatingCart with empty cart is translated off-viewport (y=882 in a 844-tall viewport) - not peeking. Admin upload POST /api/admin/upload works end-to-end via Emergent object storage and the returned /api/files/<path> serves the PNG with correct Content-Type. Order-status transitions correctly drive /orders/{id}/live-tracking (dispatched -> currentStage>=2, delivered -> progress 1.0 currentStage 3).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/admin/products/{id} (featured toggle)", "issue": "There is no cascading un-feature when a product is later set isActive:false — first cleanup run of my test left two TEST_ products with featured=True, isActive=True (still hidden from public list because /featured filters isActive!=False, so no user-visible fallout, but admin star icon in the ProductsManager stays lit). Suggest: server.py could auto-set featured=False when isActive is turned off. Cleaned up in this run via a class-level autouse teardown fixture in the new pytest."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kapa_iteration4_admin.py",
+    "/app/test_reports/pytest/iteration4_results.xml"
+  ],
+  "action_items": [
+    "(Optional, minor) In admin.py update_product / delete_product: when isActive transitions to False, also set featured=False so the star pip in the admin grid stays consistent with the public /featured list."
+  ],
+  "critical_code_review_comments": [
+    "admin.py:127-130 bump_version() is called on every product/class mutation and drives useCatalogSync polling in the customer app — verified live: single sale-price PUT bumped catalog version and Home re-rendered within one 4s poll cycle.",
+    "admin.py:279-294 move_product() re-numbers ALL siblings sortOrder starting at 1 on every move — O(n) per move, fine for current catalog sizes (<200 products/category) but worth a quick note for scale; alternative is to swap only the two affected rows.",
+    "admin.py:355-376 upload() reads the full file into memory and enforces 10 MB. For PDFs at admin scale this is fine; consider streaming to storage if PDF class-notes ever exceed a few MB.",
+    "admin.py:341 paymentStatus is derived at read-time from paymentMethod=='COD' AND status!='delivered' — a paid COD order not yet marked delivered will show 'pending'; that matches the intended UX (cash collected on delivery).",
+    "ProductCard.tsx: price row and stepper are now on separate rows (footer gap:6), priceRow uses flexWrap:'wrap', numberOfLines is NOT set on the price Text — verified no ellipsis in 2-col grid.",
+    "FloatingCart.tsx: uses `pointerEvents={visible ? 'auto' : 'none'}` and a spring-animated translateY that parks it at bottomOffset+90 when hidden; measured bounding box y=882 in a 844-tall viewport confirms it is fully off-screen when cart empty."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kapa_iteration4_admin.py (new — 25 admin-console pytests: auth, products CRUD/move/featured/isActive, classes CRUD & public visibility, orders status transitions & live-tracking, upload PNG/text-plain/no-token)",
+    "/app/test_reports/pytest/iteration4_results.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (59/59 pytests passing under -n 2 --dist loadscope; 25/25 new admin tests)", "frontend": "100% for the flows exercised (bug verify, admin login/tabs/form, Classes tab, live sync, tracking, hidden admin entry, floating cart empty)"},
+  "seed_data_creation": "test_kapa_iteration4_admin.TestAdminProducts creates one TEST_Iter4 Pen (KL-*) per run in cat-pens and marks it isActive:False, featured:False via class-level teardown. TestAdminOrders creates a real COD guest order (userId=guest) to exercise dispatch/deliver; that order will remain in the DB as 'delivered' but is harmless. TestAdminClasses creates and DELETEs its own class. TestAdminUpload writes one 1x1 PNG per run into Emergent object storage under kapa-learning/uploads/admin/*.png (files collection persists metadata).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Admin token: POST /api/admin/auth/login {admin@kapalearning.com/Kapa@Admin2026} -> Bearer. Public catalog polls /api/v1/catalog/version every 4s (useCatalogSync). Live-sync end-to-end confirmed at 4-6s. To reproduce the price fix visually: 390x844 -> Categories tab -> NCERT Books -> assert product-card-* Text nodes contain full '₹<n>' with no ellipsis. Order create requires deliveryAddress + items[].unitPrice + totalAmount (see _seed_order in the new pytest). Move endpoint returns {moved:false} at grid boundaries. Featured endpoint /api/v1/products/featured filters isActive!=False and falls back to 8 non-featured active products when nothing is featured. useCatalogSync is the only reason live-sync works — don't remove.",
+  "rca_of_issue": "N/A — no functional bugs found. The narrow-grid price truncation reported by the user is fixed in ProductCard.tsx by stacking the price row above the stepper (footer.gap:6, priceRow.flexWrap:'wrap', no numberOfLines on price). The FloatingCart 'peeking on web' issue is fixed by animating translateY to hiddenY = bottomOffset+90 and setting pointerEvents='none' when totalCount===0; verified via bounding box (y=882 in a 844-tall viewport)."
+}

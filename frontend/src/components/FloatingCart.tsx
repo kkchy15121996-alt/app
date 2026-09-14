@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
 import { useCart } from "@/src/context/CartContext";
+import { imageUrl } from "@/src/lib/api";
 
 const TAB_HEIGHT_BASE = 60;
 
@@ -19,18 +20,20 @@ export function FloatingCart() {
   const router = useRouter();
   const { totalCount, totalPrice, lines } = useCart();
 
-  const translateY = useSharedValue(120);
+  const bottomOffset = TAB_HEIGHT_BASE + Math.max(insets.bottom, 8) + 8;
+  // Slide fully below the screen edge when hidden (pill height + bottom offset)
+  const hiddenY = bottomOffset + 90;
+  const translateY = useSharedValue(hiddenY);
   const visible = totalCount > 0;
 
   useEffect(() => {
-    translateY.value = withSpring(visible ? 0 : 120, { damping: 22, stiffness: 220 });
-  }, [visible, translateY]);
+    translateY.value = withSpring(visible ? 0 : hiddenY, { damping: 22, stiffness: 220 });
+  }, [visible, translateY, hiddenY]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
+    opacity: visible ? 1 : Math.max(0, 1 - translateY.value / 60),
   }));
-
-  const bottomOffset = TAB_HEIGHT_BASE + Math.max(insets.bottom, 8) + 8;
   const previews = Object.values(lines).slice(0, 3);
 
   return (
@@ -51,7 +54,7 @@ export function FloatingCart() {
               style={[styles.avatar, { marginLeft: idx === 0 ? 0 : -12, zIndex: 10 - idx }]}
             >
               <Image
-                source={{ uri: line.product.images[0] }}
+                source={{ uri: imageUrl(line.product.images[0]) }}
                 style={styles.avatarImg}
                 contentFit="cover"
               />

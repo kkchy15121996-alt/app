@@ -11,6 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
+from admin import build_admin_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -19,6 +20,7 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+admin_router, files_router, seed_admin = build_admin_router(db)
 
 app = FastAPI(title="Kapa Learning API")
 api_router = APIRouter(prefix="/api")
@@ -320,12 +322,24 @@ async def seed_db():
 @app.on_event("startup")
 async def startup_event():
     await seed_db()
+    await seed_admin()
 
 
 # ===================== ROUTES =====================
 @api_router.get("/")
 async def root():
     return {"service": "Kapa Learning API", "status": "ok"}
+
+
+@api_router.get("/v1/catalog/version")
+async def catalog_version():
+    meta = await db.meta.find_one({"key": "catalogVersion"}, {"_id": 0})
+    return {"version": (meta or {}).get("version", 1), "updatedAt": (meta or {}).get("updatedAt")}
+
+
+@api_router.get("/v1/classes")
+async def list_classes():
+    return await db.classes.find({"isPublished": {"$ne": False}}, {"_id": 0}).sort("scheduledAt", 1).to_list(200)
 
 
 @app.get("/health")
@@ -350,7 +364,7 @@ async def get_categories():
 
 @api_router.get("/v1/products")
 async def get_products(categoryId: Optional[str] = None, darkStoreId: Optional[str] = None, q: Optional[str] = None):
-    query = {}
+    query = {"isActive": {"$ne": False}}
     if categoryId:
         query["category"] = categoryId
     if darkStoreId:
@@ -360,13 +374,15 @@ async def get_products(categoryId: Optional[str] = None, darkStoreId: Optional[s
             {"title": {"$regex": q, "$options": "i"}},
             {"subtitle": {"$regex": q, "$options": "i"}},
         ]
-    products = await db.products.find(query, {"_id": 0}).to_list(500)
+    products = await db.products.find(query, {"_id": 0}).sort([("category", 1), ("sortOrder", 1)]).to_list(500)
     return products
 
 
 @api_router.get("/v1/products/featured")
 async def get_featured_products():
-    products = await db.products.find({}, {"_id": 0}).limit(8).to_list(8)
+    products = await db.products.find({"featured": True, "isActive": {"$ne": False}}, {"_id": 0}).sort("sortOrder", 1).to_list(12)
+    if not products:
+        products = await db.products.find({"isActive": {"$ne": False}}, {"_id": 0}).limit(8).to_list(8)
     return products
 
 
@@ -610,6 +626,16 @@ async def get_order_tracking(orderId: str):
     current_stage = min(int(elapsed / stage_duration), 3)
     progress = min(elapsed / (order["slaMinutes"] * 60), 1.0)
 
+    # Admin-driven status overrides the timer simulation
+    admin_status = order.get("status")
+    if admin_status == "dispatched":
+        current_stage = max(current_stage, 2)
+        progress = max(progress, 0.5)
+    elif admin_status == "delivered":
+        current_stage, progress = 3, 1.0
+    elif admin_status == "cancelled":
+        current_stage, progress = 0, 0.0
+
     stages = [
         {"key": "placed", "label": "Order Placed & Confirmed", "completed": True},
         {"key": "packed", "label": "Order Packed at Kapa Dark Store", "completed": current_stage >= 1},
@@ -643,6 +669,8 @@ async def list_orders(userId: str = "guest"):
 
 
 app.include_router(api_router)
+app.include_router(admin_router)
+app.include_router(files_router)
 
 app.add_middleware(
     CORSMiddleware,

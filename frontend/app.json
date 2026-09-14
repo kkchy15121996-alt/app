@@ -9,14 +9,20 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.edusupplyshop.avrle3"
+      "bundleIdentifier": "com.emergent.edusupplyshop.avrle3",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Upload product photos to the Kapa catalog"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.edusupplyshop.avrle3"
+      "package": "com.emergent.edusupplyshop.avrle3",
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -40,7 +46,13 @@
       "expo-web-browser",
       "expo-status-bar",
       "@react-native-vector-icons/ionicons",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Upload product photos to the Kapa catalog"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

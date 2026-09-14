@@ -51,3 +51,21 @@ Students, parents, teachers and small offices in Delhi NCR who need study/office
 - Real GPS map SDK
 - Authentication (guest user only)
 - Push notifications
+
+## v1.2 Features
+- **Admin Console** (`/admin`, hidden; also reachable by tapping the Profile footer 5×): email + password JWT login (bcrypt, 12h token). Seeded admin **admin@kapalearning.com / Kapa@Admin2026** (changeable via key icon in the console).
+  - Products manager: search/filter, edit title/subtitle/category/MRP/sale price/stock/photo (upload → Emergent Object Storage), ▲▼ reorder within category, ★ Featured-on-Home toggle, hide/show, New product → Publish.
+  - Batch & Classes manager: title, subject, grade, YouTube/HLS URL (auto-detected), date/time/duration, PDF notes upload, publish toggle.
+  - Orders: customer address, items, payment status, Mark Dispatched → Mark Delivered / Cancel. Dispatch/deliver override the simulated tracking stage.
+  - Live sync: every admin change bumps `GET /api/v1/catalog/version`; the customer app polls it every 4s and refetches, so changes appear without rebuild.
+- **Classes tab** (customer): grade filter, class cards with live/upcoming/recorded status, in-app YouTube/HLS player (WebView), PDF notes open in browser.
+- **Live Route Polyline**: tracking map is now an SVG cubic-Bézier route with animated travelled segment, rider marker gliding along the path (rotates with heading), store/destination labels, "Delivered" state.
+- **Bug fix**: product price no longer truncates to "…" in narrow grids (price row stacked above ADD).
+
+## Admin API (v1.2) — all under `/api/admin`, Bearer token required except login
+- `POST /auth/login`, `GET /auth/me`, `PUT /auth/password`, `GET /stats`
+- `GET/POST /products`, `PUT/DELETE /products/{id}`, `POST /products/{id}/move`, `GET /categories`
+- `GET/POST /classes`, `PUT/DELETE /classes/{id}`
+- `GET /orders`, `PUT /orders/{id}/status`
+- `POST /upload` (multipart, jpg/png/webp/pdf ≤10MB) → `/api/files/{path}` (public read)
+- Public: `GET /api/v1/classes`, `GET /api/v1/catalog/version`

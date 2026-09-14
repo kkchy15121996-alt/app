@@ -3,8 +3,10 @@ import { Platform, View } from "react-native";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors } from "@/src/theme";
 import { FloatingCart } from "@/src/components/FloatingCart";
+import { useCatalogSync } from "@/src/hooks/useCatalogSync";
 
 export default function TabsLayout() {
+  useCatalogSync();
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <Tabs
@@ -33,6 +35,13 @@ export default function TabsLayout() {
           options={{
             title: "Categories",
             tabBarIcon: ({ color, size }) => <Ionicons name="grid" size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="classes"
+          options={{
+            title: "Classes",
+            tabBarIcon: ({ color, size }) => <Ionicons name="school" size={size} color={color} />,
           }}
         />
         <Tabs.Screen

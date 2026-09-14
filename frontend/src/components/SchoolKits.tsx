@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
-import { api, type Kit } from "@/src/lib/api";
+import { api, imageUrl, type Kit } from "@/src/lib/api";
 import { useCart } from "@/src/context/CartContext";
 
 function KitCard({ kit, onOpen, onAdd, added }: { kit: Kit; onOpen: () => void; onAdd: () => void; added: boolean }) {
@@ -120,7 +120,7 @@ export function SchoolKitsSection() {
               <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
                 {openKit.items.map((it) => (
                   <View key={it.product.id} style={styles.itemRow}>
-                    <Image source={{ uri: it.product.images[0] }} style={styles.itemImg} contentFit="cover" />
+                    <Image source={{ uri: imageUrl(it.product.images[0]) }} style={styles.itemImg} contentFit="cover" />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.itemTitle} numberOfLines={1}>{it.product.title}</Text>
                       <Text style={styles.itemSub} numberOfLines={1}>{it.product.subtitle}</Text>

@@ -13,12 +13,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Animated, {
   Easing,
+  useAnimatedProps,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
 import { api } from "@/src/lib/api";
@@ -26,6 +29,41 @@ import { api } from "@/src/lib/api";
 const { width } = Dimensions.get("window");
 const MAP_W = width;
 const MAP_H = Math.min(320, Dimensions.get("window").height * 0.42);
+
+// Route geometry: cubic Bézier from the dark store (top-right) to the customer (bottom-left)
+const P0 = { x: MAP_W - 56, y: 64 };
+const P1 = { x: MAP_W - 40, y: MAP_H * 0.62 };
+const P2 = { x: MAP_W * 0.35, y: MAP_H * 0.28 };
+const P3 = { x: 56, y: MAP_H - 56 };
+const ROUTE_D = `M ${P0.x} ${P0.y} C ${P1.x} ${P1.y}, ${P2.x} ${P2.y}, ${P3.x} ${P3.y}`;
+
+function bezierPoint(t: number) {
+  "worklet";
+  const mt = 1 - t;
+  const a = mt * mt * mt;
+  const b = 3 * mt * mt * t;
+  const c = 3 * mt * t * t;
+  const d = t * t * t;
+  return {
+    x: a * P0.x + b * P1.x + c * P2.x + d * P3.x,
+    y: a * P0.y + b * P1.y + c * P2.y + d * P3.y,
+  };
+}
+
+// Approximate total path length so stroke-dash animation maps 1:1 to progress
+const ROUTE_LENGTH = (() => {
+  let len = 0;
+  let prev = bezierPoint(0);
+  for (let i = 1; i <= 200; i++) {
+    const p = bezierPoint(i / 200);
+    len += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+  }
+  return len;
+})();
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 function PulseRing() {
   const scale = useSharedValue(1);
@@ -55,72 +93,117 @@ function PulseRing() {
   return <Animated.View style={[styles.pulseRing, style]} />;
 }
 
-function RiderMarker({ progress }: { progress: number }) {
-  const px = useSharedValue(0);
-  const py = useSharedValue(0);
+/** Animated SVG polyline: travelled segment fills in, rider glides along the curve. */
+function RouteVisual({ progress, arrived }: { progress: number; arrived: boolean }) {
+  const t = useSharedValue(0);
+  const wobble = useSharedValue(0);
 
   useEffect(() => {
-    // Curved route from top-right (store) to bottom-left (destination)
-    const startX = MAP_W - 60;
-    const startY = 60;
-    const endX = 60;
-    const endY = MAP_H - 60;
-    // Simple curved bezier position by progress
-    const t = Math.max(0, Math.min(1, progress));
-    const cx = MAP_W / 2 + 40;
-    const cy = MAP_H / 2 - 40;
-    const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX;
-    const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
-    px.value = withTiming(x, { duration: 800 });
-    py.value = withTiming(y, { duration: 800 });
-  }, [progress, px, py]);
+    t.value = withTiming(Math.max(0, Math.min(1, progress)), { duration: 2600, easing: Easing.inOut(Easing.cubic) });
+  }, [progress, t]);
 
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: px.value - 22 },
-      { translateY: py.value - 22 },
-    ],
+  useEffect(() => {
+    wobble.value = withRepeat(withSequence(withTiming(-2, { duration: 420 }), withTiming(2, { duration: 420 })), -1, true);
+  }, [wobble]);
+
+  const travelledProps = useAnimatedProps(() => ({
+    strokeDashoffset: ROUTE_LENGTH * (1 - t.value),
   }));
 
-  return (
-    <Animated.View style={[styles.riderMarker, style]}>
-      <View style={styles.riderBubble}>
-        <Ionicons name="bicycle" size={20} color={colors.onBrandPrimary} />
-      </View>
-    </Animated.View>
-  );
-}
+  const riderPos = useDerivedValue(() => bezierPoint(t.value));
 
-function RouteVisual({ progress }: { progress: number }) {
+  const riderStyle = useAnimatedStyle(() => {
+    const p = riderPos.value;
+    const ahead = bezierPoint(Math.min(1, t.value + 0.01));
+    const angle = (Math.atan2(ahead.y - p.y, ahead.x - p.x) * 180) / Math.PI;
+    // Flip the bike so it never renders upside-down while heading left
+    const flip = Math.abs(angle) > 90;
+    return {
+      transform: [
+        { translateX: p.x - 22 },
+        { translateY: p.y - 22 + wobble.value },
+        { rotate: `${flip ? angle - 180 : angle}deg` },
+        { scaleX: flip ? -1 : 1 },
+      ],
+    };
+  });
+
+  const haloProps = useAnimatedProps(() => ({ cx: riderPos.value.x, cy: riderPos.value.y }));
+
   return (
     <View style={styles.mapWrap}>
-      {/* Faux street grid */}
-      <View style={styles.mapBg}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View key={`h${i}`} style={[styles.gridLine, { top: (MAP_H / 6) * i, width: "100%", height: 1 }]} />
+      <Svg width={MAP_W} height={MAP_H}>
+        <Defs>
+          <LinearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#EAF4EC" />
+            <Stop offset="1" stopColor="#DDEBE0" />
+          </LinearGradient>
+        </Defs>
+        <Rect x={0} y={0} width={MAP_W} height={MAP_H} fill="url(#mapBg)" />
+        {/* Faux city blocks */}
+        <G opacity={0.9}>
+          {[0.12, 0.42, 0.7].map((fy, i) =>
+            [0.08, 0.36, 0.62].map((fx, j) => (
+              <Rect
+                key={`b${i}${j}`}
+                x={MAP_W * fx}
+                y={MAP_H * fy}
+                width={MAP_W * 0.2}
+                height={MAP_H * 0.18}
+                rx={6}
+                fill={(i + j) % 2 ? "#D4E6D8" : "#CFE2D4"}
+              />
+            )),
+          )}
+        </G>
+        {/* Street grid */}
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Line key={`h${i}`} x1={0} y1={(MAP_H / 7) * i} x2={MAP_W} y2={(MAP_H / 7) * i} stroke="rgba(255,255,255,0.85)" strokeWidth={3} />
         ))}
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View key={`v${i}`} style={[styles.gridLine, { left: (MAP_W / 6) * i, top: 0, bottom: 0, width: 1 }]} />
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Line key={`v${i}`} x1={(MAP_W / 7) * i} y1={0} x2={(MAP_W / 7) * i} y2={MAP_H} stroke="rgba(255,255,255,0.85)" strokeWidth={3} />
         ))}
-      </View>
-
-      {/* Route curve using rotated pill */}
-      <View style={styles.routeLine} />
+        {/* Remaining route (dotted) */}
+        <Path d={ROUTE_D} stroke={colors.brandPrimary} strokeOpacity={0.3} strokeWidth={5} strokeLinecap="round" fill="none" strokeDasharray="1 10" />
+        {/* Travelled route (solid, animates with progress) */}
+        <AnimatedPath
+          d={ROUTE_D}
+          stroke={colors.brandPrimary}
+          strokeWidth={5}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={`${ROUTE_LENGTH} ${ROUTE_LENGTH}`}
+          animatedProps={travelledProps}
+        />
+        {/* Rider halo */}
+        <AnimatedCircle r={26} fill={colors.brandPrimary} fillOpacity={0.15} animatedProps={haloProps} />
+      </Svg>
 
       {/* Store pin */}
-      <View style={[styles.storePin, { right: 40, top: 40 }]}>
+      <View style={[styles.storePin, { left: P0.x - 17, top: P0.y - 17 }]} testID="store-pin">
         <Ionicons name="storefront" size={16} color={colors.onBrandPrimary} />
+      </View>
+      <View style={[styles.pinLabel, { left: P0.x - 90, top: P0.y + 22 }]}>
+        <Text style={styles.pinLabelText}>Kapa Dark Store</Text>
       </View>
 
       {/* Destination pin */}
-      <View style={[styles.destPin, { left: 40, bottom: 40 }]}>
+      <View style={[styles.destPin, { left: P3.x - 17, top: P3.y - 17 }]} testID="destination-pin">
         <PulseRing />
         <View style={styles.destInner}>
-          <Ionicons name="location" size={16} color={colors.onError} />
+          <Ionicons name={arrived ? "checkmark" : "location"} size={16} color={colors.onError} />
         </View>
       </View>
+      <View style={[styles.pinLabel, { left: P3.x + 22, top: P3.y - 12 }]}>
+        <Text style={styles.pinLabelText}>{arrived ? "Delivered" : "Your gate"}</Text>
+      </View>
 
-      <RiderMarker progress={progress} />
+      {/* Rider marker */}
+      <Animated.View style={[styles.riderMarker, riderStyle]} testID="rider-marker">
+        <View style={styles.riderBubble}>
+          <Ionicons name="bicycle" size={20} color={colors.onBrandPrimary} />
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -138,6 +221,7 @@ export default function TrackingScreen() {
   });
 
   const progress = tracking.data?.progress ?? 0;
+  const arrived = tracking.data?.status === "delivered" || progress >= 1;
 
   return (
     <View style={styles.container}>
@@ -149,7 +233,7 @@ export default function TrackingScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <RouteVisual progress={progress} />
+      <RouteVisual progress={progress} arrived={arrived} />
 
       <ScrollView
         style={styles.sheet}
@@ -158,9 +242,9 @@ export default function TrackingScreen() {
       >
         <View style={styles.etaCard}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.etaLabel}>Arriving in</Text>
+            <Text style={styles.etaLabel}>{arrived ? "Order status" : "Arriving in"}</Text>
             <Text style={styles.etaValue}>
-              {tracking.data?.etaMinutes ?? "—"} min
+              {arrived ? "Delivered" : `${tracking.data?.etaMinutes ?? "—"} min`}
             </Text>
           </View>
           <View style={styles.riderInfo}>
@@ -265,25 +349,22 @@ const styles = StyleSheet.create({
   mapWrap: {
     width: MAP_W,
     height: MAP_H,
-    backgroundColor: "#E8F0EA",
     overflow: "hidden",
+    position: "relative",
   },
-  mapBg: { ...StyleSheet.absoluteFillObject },
-  gridLine: {
+  pinLabel: {
     position: "absolute",
-    backgroundColor: "rgba(0,0,0,0.06)",
+    backgroundColor: colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  routeLine: {
-    position: "absolute",
-    top: MAP_H / 2 - 3,
-    left: 40,
-    right: 40,
-    height: 6,
-    backgroundColor: colors.brandPrimary,
-    borderRadius: 3,
-    transform: [{ rotate: "-25deg" }],
-    opacity: 0.4,
-  },
+  pinLabelText: { fontSize: 10, fontWeight: "800", color: colors.onSurface },
   storePin: {
     position: "absolute",
     width: 34,
