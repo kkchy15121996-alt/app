@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Kapa Book Bazaar",
+    "slug": "kapa-book-bazaar",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "kapabookbazaar",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.edusupplyshop.avrle3",
+      "bundleIdentifier": "in.kapabookbazaar.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Upload product photos to the Kapa catalog"
       }
@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.edusupplyshop.avrle3",
+      "package": "in.kapabookbazaar.app",
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES"
       ]
@@ -27,7 +27,8 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Kapa Book Bazaar - 10-Minute Book & Stationery Delivery"
     },
     "plugins": [
       "expo-router",

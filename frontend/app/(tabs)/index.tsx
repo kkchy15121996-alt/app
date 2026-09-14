@@ -44,7 +44,7 @@ const PLACEHOLDERS = [
 const BANNERS = [
   {
     id: "b1",
-    title: "Exam Ready in 10 Mins",
+    title: "Exam Ready in 2-3 Hours",
     subtitle: "Up to 50% Off on Test Prep",
     color: "#0C8346",
     image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800",
@@ -189,10 +189,17 @@ export default function HomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Sticky Header */}
       <View style={styles.header}>
+        <View style={styles.brandRow}>
+          <View style={styles.brandMark}>
+            <Ionicons name="book" size={14} color={colors.onBrandPrimary} />
+          </View>
+          <Text style={styles.brandText} testID="brand-title">Kapa Book Bazaar</Text>
+          <Text style={styles.brandDomain}>kapabookbazaar.in</Text>
+        </View>
         <View style={styles.headerTop}>
           <View style={styles.slaBadge} testID="sla-badge">
             <PulsingDot />
-            <Text style={styles.slaText}>{store.data?.slaMinutes ?? "10-12 MINS"}</Text>
+            <Text style={styles.slaText}>{store.data?.slaMinutes ?? "2-3 HRS"}</Text>
           </View>
           <TouchableOpacity style={styles.locationBtn} onPress={openSheet} testID="location-selector">
             <Text style={styles.locationLabel}>Delivery to</Text>
@@ -287,6 +294,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: spacing.sm },
+  brandMark: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.brandPrimary, justifyContent: "center", alignItems: "center" },
+  brandText: { fontSize: 15, fontWeight: "800", color: colors.brandPrimary, letterSpacing: 0.2 },
+  brandDomain: { marginLeft: "auto", fontSize: 10, color: colors.muted, fontWeight: "600" },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",

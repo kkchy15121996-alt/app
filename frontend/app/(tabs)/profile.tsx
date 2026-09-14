@@ -13,7 +13,7 @@ import { ADDRESS_ICONS, useAddress } from "@/src/context/AddressContext";
 import { StreakCard } from "@/src/components/StreakRewards";
 
 const ROWS = [
-  { icon: "help-circle" as const, label: "Help & Support" },
+  { icon: "help-circle" as const, label: "Help & Support", sub: "support@kapabookbazaar.in" },
   { icon: "gift" as const, label: "Refer & Earn" },
   { icon: "document-text" as const, label: "Terms & Privacy" },
 ];
@@ -173,7 +173,10 @@ export default function ProfileScreen() {
           {ROWS.map((row) => (
             <TouchableOpacity key={row.label} style={styles.menuRow} testID={`menu-${row.label}`}>
               <Ionicons name={row.icon as any} size={20} color={colors.brandPrimary} />
-              <Text style={styles.menuLabel}>{row.label}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuLabel}>{row.label}</Text>
+                {"sub" in row && row.sub ? <Text style={styles.menuSub}>{row.sub}</Text> : null}
+              </View>
               <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
           ))}
@@ -194,7 +197,8 @@ export default function ProfileScreen() {
           }}
           testID="profile-footer"
         >
-          <Text style={styles.footer}>Kapa Learning v1.1 • Made with ❤️ in Delhi</Text>
+          <Text style={styles.footer}>Kapa Book Bazaar v1.2 • Made with ❤️ in Delhi</Text>
+          <Text style={styles.footer}>© 2026 Kapa Book Bazaar (kapabookbazaar.in). All rights reserved.</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -318,7 +322,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  menuLabel: { flex: 1, fontSize: 14, color: colors.onSurface, fontWeight: "500" },
+  menuLabel: { fontSize: 14, color: colors.onSurface, fontWeight: "500" },
+  menuSub: { fontSize: 11, color: colors.muted, marginTop: 2 },
 
   footer: {
     textAlign: "center",

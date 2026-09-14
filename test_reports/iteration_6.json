@@ -1,0 +1,32 @@
+{
+  "summary": "Rebrand regression 'Kapa Learning' -> 'Kapa Book Bazaar' fully verified end-to-end. Backend: 70/70 pytest pass, including 10 new iteration-6 tests (GET /api/ service='Kapa Book Bazaar API', darkstore slaMinutes='2-3 HRS', admin login on admin@kapabookbazaar.in success, old admin@kapalearning.com -> 401, order slaMinutes=150, live-tracking etaMinutes<=150 and 'Order Packed at Kapa Book Bazaar Store' stage label). CORS: kapabookbazaar.in explicit allow works publicly; *.emergentagent.com regex verified locally (backend code correct) and confirmed against a non-preview subdomain over the public URL; random origins are rejected. Frontend (390x844 web): document.title correct; Home shows brand-title 'Kapa Book Bazaar' + sla-badge '2-3 HRS' + banner 'Exam Ready in 2-3 Hours'; Categories/Classes/Print Store ('Kapa Book Bazaar Print Store')/Profile ('© 2026 Kapa Book Bazaar (kapabookbazaar.in)' + support@kapabookbazaar.in) contain no 'Kapa Learning' string. Cart shows 'Delivery to Home in 2-3 hrs' header, 'Delivery in 2-3 hours' card, SAME DAY pill, testID expected-delivery-btn with 'Expected delivery time' + time range '3:21 AM – 4:21 AM, today'; 'Bill details • Kapa Book Bazaar' present (rendered uppercase via CSS text-transform; source string is correct). UPI order flow lands on tracking screen with ETA '2 hr 29 min' and store label 'Kapa Book Bazaar Store'. /admin login page title 'Kapa Book Bazaar Admin' + email placeholder admin@kapabookbazaar.in; successful login lands on dashboard with header 'Kapa Book Bazaar Admin'. No console errors observed on any screen.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kapa_iteration6_rebrand.py",
+    "/app/test_reports/pytest/iteration6_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py CORS: allow_origins list includes kapabookbazaar.in + www, and allow_origin_regex correctly matches *.emergentagent.com / *.emergent.host / *.kapabookbazaar.in. Verified backend allows https://edu-supply-shop-1.preview.emergentagent.com when hit at http://localhost:8001 (200, correct allow-origin header).",
+    "Platform note: the Emergent preview ingress returns 400 'Disallowed CORS origin' for OPTIONS requests with Origin=*.preview.emergentagent.com when hit through the public URL. This is upstream from FastAPI (verified: non-preview *.emergentagent.com origins work fine over public URL, and the same preview origin works when hit at localhost). No app change required.",
+    "admin.py still runs a one-time migration `db.admins.update_one({'email': 'admin@kapalearning.com'}, {'$set': {'email': ADMIN_EMAIL}})` on startup - safe/idempotent; can be removed after any legacy admin doc has been migrated."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kapa_iteration6_rebrand.py (new)"
+  ],
+  "success_rate": {"backend": "100% (70/70)", "frontend": "100% (Home, Categories, Classes, Print Store, Profile, Cart, Checkout, UPI order, Tracking, /admin login + dashboard)"},
+  "seed_data_creation": "TEST_ prefixed order for user 'rebrand-test-user' during iteration-6 rebrand tests; existing suite continues to create and clean up TEST_ products/classes/orders as before.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rebrand is complete. If CORS is retested from the public URL, note that Origin=*.preview.emergentagent.com is blocked by the platform ingress with 400; use kapabookbazaar.in or a non-preview *.emergentagent.com origin, OR hit http://localhost:8001 to verify FastAPI's own regex.",
+  "rca_of_issue": "N/A - regression run only."
+}

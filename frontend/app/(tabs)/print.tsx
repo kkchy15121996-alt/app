@@ -19,7 +19,7 @@ export default function PrintScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Kapa Print Store</Text>
+        <Text style={styles.title}>Kapa Book Bazaar Print Store</Text>
         <Text style={styles.subtitle}>Get prints & photocopies delivered in 30 mins</Text>
       </View>
 

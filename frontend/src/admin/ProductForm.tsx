@@ -160,7 +160,7 @@ export function ProductForm({ visible, onClose, product }: Props) {
               {showPermExplain && (
                 <View style={styles.permCard}>
                   <Text style={styles.permTitle}>Allow photo access?</Text>
-                  <Text style={styles.permText}>Kapa uses your photo library only to pick product pictures for the catalog.</Text>
+                  <Text style={styles.permText}>Kapa Book Bazaar uses your photo library only to pick product pictures for the catalog.</Text>
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                     <Button title="Not now" variant="ghost" small onPress={() => setShowPermExplain(false)} />
                     <Button title="Allow" small onPress={onAllowPhotos} testID="perm-allow-btn" />

@@ -50,14 +50,14 @@ export default function AdminLoginScreen() {
           <View style={styles.logo}>
             <Ionicons name="shield-checkmark" size={28} color={colors.onBrandPrimary} />
           </View>
-          <Text style={styles.title}>Kapa Admin Console</Text>
+          <Text style={styles.title}>Kapa Book Bazaar Admin</Text>
           <Text style={styles.sub}>Manage catalog, classes and orders. Changes go live instantly.</Text>
 
           <Field
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="admin@kapalearning.com"
+            placeholder="admin@kapabookbazaar.in"
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"

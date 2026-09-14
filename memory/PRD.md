@@ -1,7 +1,9 @@
-# Kapa Learning — Product Requirements Document
+# Kapa Book Bazaar (kapabookbazaar.in) — Product Requirements Document
+
+> Rebranded from "Kapa Book Bazaar" to **Kapa Book Bazaar** in v1.3. App slug `kapa-book-bazaar`, scheme `kapabookbazaar`, Android/iOS id `in.kapabookbazaar.app`. Delivery promise is now a **2-3 hour** window (checkout shows an expected-delivery-time button) instead of 10-12 minutes. Admin login: admin@kapabookbazaar.in.
 
 ## Overview
-Kapa Learning is a hyperlocal quick-commerce mobile app (Blinkit-inspired) that delivers educational supplies — NCERT books, hardbound registers, pens & markers, art supplies, exam kits and office essentials — in 10–12 minutes.
+Kapa Book Bazaar is a hyperlocal quick-commerce mobile app (Blinkit-inspired) that delivers educational supplies — NCERT books, hardbound registers, pens & markers, art supplies, exam kits and office essentials — in 10–12 minutes.
 
 ## Target Users
 Students, parents, teachers and small offices in Delhi NCR who need study/office material urgently.

@@ -49,7 +49,7 @@ export default function AdminDashboard() {
             <Ionicons name="shield-checkmark" size={18} color={colors.onBrandPrimary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Admin Console</Text>
+            <Text style={styles.title}>Kapa Book Bazaar Admin</Text>
             <Text style={styles.sub} numberOfLines={1}>{email}</Text>
           </View>
           <TouchableOpacity onPress={() => setPwOpen(true)} style={styles.hBtn} testID="admin-change-password-btn">

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
 STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
-APP_NAME = "kapa-learning"
+APP_NAME = "kapa-book-bazaar"
 
 _storage_key = None
 

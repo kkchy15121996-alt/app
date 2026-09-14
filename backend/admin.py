@@ -137,6 +137,8 @@ def build_admin_router(db) -> tuple:
         )
 
     async def seed_admin():
+        # Rebrand migration: carry the seeded admin over to the new domain email
+        await db.admins.update_one({"email": "admin@kapalearning.com"}, {"$set": {"email": ADMIN_EMAIL}})
         if not await db.admins.find_one({"email": ADMIN_EMAIL}):
             await db.admins.insert_one(
                 {"email": ADMIN_EMAIL, "password_hash": hash_password(ADMIN_PASSWORD), "role": "admin", "createdAt": now_iso()}

@@ -62,6 +62,14 @@ const ROUTE_LENGTH = (() => {
   return len;
 })();
 
+function formatEta(mins?: number): string {
+  if (mins === undefined || mins === null) return "—";
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h} hr ${m} min` : `${h} hr`;
+}
+
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -184,7 +192,7 @@ function RouteVisual({ progress, arrived }: { progress: number; arrived: boolean
         <Ionicons name="storefront" size={16} color={colors.onBrandPrimary} />
       </View>
       <View style={[styles.pinLabel, { left: P0.x - 90, top: P0.y + 22 }]}>
-        <Text style={styles.pinLabelText}>Kapa Dark Store</Text>
+        <Text style={styles.pinLabelText}>Kapa Book Bazaar Store</Text>
       </View>
 
       {/* Destination pin */}
@@ -244,7 +252,7 @@ export default function TrackingScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.etaLabel}>{arrived ? "Order status" : "Arriving in"}</Text>
             <Text style={styles.etaValue}>
-              {arrived ? "Delivered" : `${tracking.data?.etaMinutes ?? "—"} min`}
+              {arrived ? "Delivered" : formatEta(tracking.data?.etaMinutes)}
             </Text>
           </View>
           <View style={styles.riderInfo}>

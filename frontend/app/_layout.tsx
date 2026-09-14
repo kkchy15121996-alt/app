@@ -26,7 +26,7 @@ try {
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined") {
-      document.title = "Kapa Learning";
+      document.title = "Kapa Book Bazaar - 10-Minute Book & Stationery Delivery";
     }
   }, []);
 

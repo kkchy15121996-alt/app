@@ -1,4 +1,4 @@
-"""Kapa Learning API end-to-end backend tests."""
+"""Kapa Book Bazaar API end-to-end backend tests."""
 import pytest
 import requests
 import os

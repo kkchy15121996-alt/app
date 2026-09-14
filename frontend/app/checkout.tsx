@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import dayjs from "dayjs";
 import { useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { colors, radius, spacing } from "@/src/theme";
@@ -65,6 +66,13 @@ export default function CheckoutScreen() {
   const streakDiscount = reward?.active && studySubtotal > 0 ? Math.round((studySubtotal * reward.discountPercent) / 100) : 0;
 
   const grandTotal = totalPrice + handlingFee + deliveryCharge + tip - streakDiscount;
+
+  // Expected delivery window: 2-3 hours from now
+  const deliveryWindow = useMemo(() => {
+    const start = dayjs().add(2, "hour");
+    const end = dayjs().add(3, "hour");
+    return `${start.format("h:mm A")} – ${end.format("h:mm A")}${end.isSame(dayjs(), "day") ? ", today" : ", tomorrow"}`;
+  }, []);
 
   const toggleInstruction = (id: string) => {
     Haptics.selectionAsync().catch(() => {});
@@ -122,7 +130,7 @@ export default function CheckoutScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Your Cart</Text>
-          <Text style={styles.headerSub}>Delivery to {address?.label ?? "Home"} in 11 mins</Text>
+          <Text style={styles.headerSub}>Delivery to {address?.label ?? "Home"} in 2-3 hrs</Text>
         </View>
       </View>
 
@@ -150,15 +158,23 @@ export default function CheckoutScreen() {
               <View style={styles.rowBetween}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Ionicons name="flash" size={16} color={colors.brandPrimary} />
-                    <Text style={styles.cardTitle}>Delivery in 11 mins</Text>
+                    <Ionicons name="time" size={16} color={colors.brandPrimary} />
+                    <Text style={styles.cardTitle}>Delivery in 2-3 hours</Text>
                   </View>
-                  <Text style={styles.cardSub}>Swaroop Nagar Dark Store • Delhi</Text>
+                  <Text style={styles.cardSub}>Kapa Book Bazaar • Swaroop Nagar Store, Delhi</Text>
                 </View>
                 <View style={styles.slaBadge}>
-                  <Text style={styles.slaText}>FASTEST</Text>
+                  <Text style={styles.slaText}>SAME DAY</Text>
                 </View>
               </View>
+              <TouchableOpacity activeOpacity={0.85} style={styles.etaBtn} testID="expected-delivery-btn">
+                <Ionicons name="calendar-outline" size={16} color={colors.onBrandPrimary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.etaBtnLabel}>Expected delivery time</Text>
+                  <Text style={styles.etaBtnValue}>{deliveryWindow}</Text>
+                </View>
+                <Ionicons name="checkmark-circle" size={18} color={colors.onBrandPrimary} />
+              </TouchableOpacity>
             </View>
 
             {/* Delivery address (one-tap switch) */}
@@ -275,7 +291,7 @@ export default function CheckoutScreen() {
             </View>
 
             {/* Bill Summary */}
-            <Text style={styles.sectionTitle}>Bill details</Text>
+            <Text style={styles.sectionTitle}>Bill details • Kapa Book Bazaar</Text>
             <View style={styles.card}>
               <BillRow label="Item total" value={`₹${totalPrice.toFixed(0)}`} />
               <BillRow label="Handling fee" value={`₹${handlingFee}`} info />
@@ -433,6 +449,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   slaText: { fontSize: 10, fontWeight: "800", color: colors.brandPrimary, letterSpacing: 0.3 },
+  etaBtn: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.brandPrimary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    minHeight: 48,
+  },
+  etaBtnLabel: { fontSize: 10, fontWeight: "700", color: colors.onBrandPrimary, opacity: 0.85, letterSpacing: 0.3 },
+  etaBtnValue: { fontSize: 14, fontWeight: "800", color: colors.onBrandPrimary, marginTop: 1 },
   addrIcon: {
     width: 36,
     height: 36,

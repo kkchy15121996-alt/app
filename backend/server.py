@@ -23,7 +23,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 admin_router, files_router, seed_admin = build_admin_router(db)
 
-app = FastAPI(title="Kapa Learning API")
+app = FastAPI(title="Kapa Book Bazaar API")
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO)
@@ -160,7 +160,7 @@ class CartSyncRequest(BaseModel):
 
 # ===================== SEED DATA =====================
 DARK_STORES = [
-    {"id": "ds-delhi-swaroop", "name": "Swaroop Nagar Dark Store", "slaMinutes": "10-12 MINS", "lat": 28.7085, "lng": 77.1930},
+    {"id": "ds-delhi-swaroop", "name": "Swaroop Nagar Dark Store", "slaMinutes": "2-3 HRS", "lat": 28.7085, "lng": 77.1930},
 ]
 
 CATEGORIES = [
@@ -298,6 +298,8 @@ async def seed_db():
     if await db.darkstores.count_documents({}) == 0:
         await db.darkstores.insert_many(DARK_STORES)
         logger.info("Seeded dark stores")
+    # Delivery promise changed from quick-commerce minutes to a 2-3 hour window
+    await db.darkstores.update_many({"slaMinutes": "10-12 MINS"}, {"$set": {"slaMinutes": "2-3 HRS"}})
 
     if await db.products.count_documents({}) == 0:
         docs = []
@@ -329,7 +331,7 @@ async def startup_event():
 # ===================== ROUTES =====================
 @api_router.get("/")
 async def root():
-    return {"service": "Kapa Learning API", "status": "ok"}
+    return {"service": "Kapa Book Bazaar API", "status": "ok"}
 
 
 @api_router.get("/v1/catalog/version")
@@ -451,7 +453,7 @@ async def create_order(payload: OrderPayload):
         "address": payload.deliveryAddress.dict(),
         "status": "confirmed",
         "createdAt": datetime.now(timezone.utc).isoformat(),
-        "slaMinutes": 11,
+        "slaMinutes": 150,
     }
     await db.orders.insert_one(order_doc.copy())
     order_doc.pop("_id", None)
@@ -639,7 +641,7 @@ async def get_order_tracking(orderId: str):
 
     stages = [
         {"key": "placed", "label": "Order Placed & Confirmed", "completed": True},
-        {"key": "packed", "label": "Order Packed at Kapa Dark Store", "completed": current_stage >= 1},
+        {"key": "packed", "label": "Order Packed at Kapa Book Bazaar Store", "completed": current_stage >= 1},
         {"key": "out", "label": "Out for Delivery - Rider Assigned", "completed": current_stage >= 2},
         {"key": "arrived", "label": "Arrived at Your Gate", "completed": current_stage >= 3},
     ]
@@ -673,10 +675,20 @@ app.include_router(api_router)
 app.include_router(admin_router)
 app.include_router(files_router)
 
+ALLOWED_ORIGINS = [
+    "https://kapabookbazaar.in",
+    "https://www.kapabookbazaar.in",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8081",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    # Emergent preview / deployed domains
+    allow_origin_regex=r"https://.*\.(emergentagent\.com|emergent\.host|kapabookbazaar\.in)",
     allow_methods=["*"],
     allow_headers=["*"],
 )

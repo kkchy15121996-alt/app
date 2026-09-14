@@ -8,7 +8,7 @@ import pytest
 import requests
 
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://edu-supply-shop-1.preview.emergentagent.com").rstrip("/")
-ADMIN_EMAIL = "admin@kapalearning.com"
+ADMIN_EMAIL = "admin@kapabookbazaar.in"
 ADMIN_PASSWORD = "Kapa@Admin2026"
 
 

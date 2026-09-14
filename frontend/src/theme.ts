@@ -1,4 +1,4 @@
-// Design tokens for Kapa Learning app.
+// Design tokens for Kapa Book Bazaar app.
 // Blinkit-inspired emerald green + clean white palette.
 
 import { useMemo } from "react";
