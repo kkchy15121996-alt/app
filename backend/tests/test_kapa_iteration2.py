@@ -122,7 +122,9 @@ class TestStreakRewards:
         s = r.json()
         assert s["active"] is False
         assert s["discountPercent"] == 0
-        assert s["potentialPercent"] == 3
+        # potentialPercent = min(3 + streak, 10); streak persists across runs
+        streak = s["streak"]
+        assert s["potentialPercent"] == min(3 + streak, 10)
 
     def test_set_future_exam_activates(self, api_client):
         future = (date.today() + timedelta(days=30)).isoformat()
@@ -132,7 +134,8 @@ class TestStreakRewards:
         assert r.status_code == 200
         s = r.json()
         assert s["active"] is True
-        assert s["discountPercent"] == 3
+        # discountPercent = min(3 + streak, 10)
+        assert s["discountPercent"] == min(3 + s["streak"], 10)
         assert s["examName"] == "CBSE Boards"
 
     def test_past_exam_date_returns_422(self, api_client):
@@ -143,13 +146,18 @@ class TestStreakRewards:
         assert r.status_code == 422
 
     def test_order_with_study_product_applies_discount_and_increments_streak(self, api_client):
+        # Use a dedicated user to isolate from parallel test_kapa_api::TestOrders which
+        # runs on `userId=guest` and would race the streak counter under xdist loadscope.
+        user = "streak-test-user"
+        # Clean state for this user first
+        api_client.delete(f"{API}/rewards/exam-date", params={"userId": user})
         # Ensure exam is set to a future date
         future = (date.today() + timedelta(days=30)).isoformat()
         api_client.put(f"{API}/rewards/exam-date", json={
-            "userId": "guest", "examName": "CBSE Boards", "examDate": future,
+            "userId": user, "examName": "CBSE Boards", "examDate": future,
         })
         # get streak baseline
-        before = api_client.get(f"{API}/rewards/streak", params={"userId": "guest"}).json()
+        before = api_client.get(f"{API}/rewards/streak", params={"userId": user}).json()
         base_streak = before["streak"]
         base_percent = before["discountPercent"]
 
@@ -158,7 +166,7 @@ class TestStreakRewards:
         qty = 2
         study_subtotal = qty * p["salePrice"]
         payload = {
-            "userId": "guest",
+            "userId": user,
             "deliveryAddress": {"street": "TEST_streak", "pincode": "110042", "instructions": []},
             "items": [{"productId": p["id"], "quantity": qty, "unitPrice": p["salePrice"]}],
             "tipAmount": 0,
@@ -176,10 +184,10 @@ class TestStreakRewards:
         # streak increments in returned body
         assert body["reward"]["streak"] == base_streak + 1
 
-        # now streak GET should reflect +1 streak and +1% discount
-        after = api_client.get(f"{API}/rewards/streak", params={"userId": "guest"}).json()
+        # now streak GET should reflect +1 streak and discount = min(3+streak, 10)
+        after = api_client.get(f"{API}/rewards/streak", params={"userId": user}).json()
         assert after["streak"] == base_streak + 1
-        assert after["discountPercent"] == base_percent + 1
+        assert after["discountPercent"] == min(3 + after["streak"], 10)
 
     def test_delete_exam_date_deactivates(self, api_client):
         r = api_client.delete(f"{API}/rewards/exam-date", params={"userId": "guest"})

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 3 regression verification of the two refactored N+1->batched endpoints (POST /api/v1/cart/sync and GET /api/v1/kits) plus a state-independent rewrite of TestStreakRewards. All 34 pytests pass under the default parallel config (-n 2 --dist loadscope) and serially. Cart/sync: with 3 valid product ids + 1 unknown id + one qty above stockQuantity, response contains only the 3 valid items, the over-qty item is clamped to stockQuantity, unitPrice==salePrice and lineTotal==qty*unitPrice for each item, itemTotal==sum(lineTotals); empty items -> [] and itemTotal 0; all-unknown items -> [] and itemTotal 0. Kits: GET /kits returns 6 fully-resolved kits (each item has product.sku/title/salePrice/mrp), itemCount==sum(quantities), kitPrice==round(sum(salePrice*qty)), mrpTotal==round(sum(mrp*qty)), savings==mrpTotal-kitPrice; GET /kits/kit-class10 returns 7 items; GET /kits/unknown -> 404. Streak tests: rewritten to read the persisted streak first and assert discountPercent==min(3+streak,10); the increment test now uses a dedicated `streak-test-user` to avoid a parallel-execution race against test_kapa_api::TestOrders which posts orders on userId=guest.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/v1/orders/create", "issue": "Increments the streak counter for ANY user whose exam date is active whenever a study-category product is ordered. Under pytest-xdist loadscope this caused a cross-module race between test_kapa_api::TestOrders (creates orders on userId=guest) and test_kapa_iteration2::TestStreakRewards (had exam active for guest). Fixed on the test side by using a dedicated userId in the increment test. Not a product bug, but worth flagging: any future test that leaves an exam active on `guest` and orders study products will drift the counter."},
+      {"endpoint": "DELETE /api/v1/rewards/exam-date", "issue": "Does not reset the `streak` field, only $unsets examName/examDate. Streak persists across exam cycles (already flagged in iteration_2, still holds). Confirmed live: guest streak is 7 after this run."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kapa_iteration2.py",
+    "/app/backend/tests/test_kapa_iteration3_refactor.py",
+    "/app/test_reports/pytest/iteration3_results.xml"
+  ],
+  "action_items": [
+    "None blocking - refactor is verified. Optional: reset `streak` to 0 in DELETE /api/v1/rewards/exam-date if a fresh 3% baseline is desired after an exam cycle ends.",
+    "Optional: consider scoping order-side streak side-effects to authenticated users (or a header-provided userId) so shared 'guest' state is less race-prone across tests."
+  ],
+  "critical_code_review_comments": [
+    "server.py:367-388 (cart/sync): correct single {id: {$in: ids}} batched lookup; unknown ids silently skipped; qty clamped to stockQuantity; unitPrice sourced from DB salePrice (not client) - good.",
+    "server.py:519-529 (kits list): products_by_sku() builds one distinct-sku set and issues a single {sku: {$in: skus}} query shared across all 6 kits - correct N+1 elimination.",
+    "server.py:532-537 (get_kit single): still calls products_by_sku([kit]) - fine (single kit means 1 query anyway).",
+    "server.py:396-412 (create_order streak logic): already uses a single $in query for category lookup - not part of this refactor but consistent."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kapa_iteration2.py (TestStreakRewards made state-independent; increment test isolated to userId=streak-test-user)",
+    "/app/backend/tests/test_kapa_iteration3_refactor.py (new - 6 regression tests for cart/sync $in and kits batched lookup)",
+    "/app/test_reports/pytest/iteration3_results.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (34/34 pytests passing under default -n 2 --dist loadscope and also under -n 0)", "frontend": "not tested (backend-only per request)"},
+  "seed_data_creation": "Increment test creates rewards doc for userId=streak-test-user (persisted). Non-blocking - can be pruned via DELETE /api/v1/rewards/exam-date?userId=streak-test-user if desired. Guest streak is now 7 (unchanged behaviour from iteration 2, still not reset on exam-date delete).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "pytest.ini pins `-n 2 --dist loadscope`. Two known cross-module shared-state pitfalls under `userId=guest`: (a) order creation increments streak when an exam is active; (b) address seeding auto-promotes Home to default. Use unique userIds when writing new tests that mutate rewards. Refactored endpoints of interest: server.py:367-388 (cart/sync $in) and server.py:519-537 (kits batched products_by_sku).",
+  "rca_of_issue": "N/A - no functional bugs. One transient parallel-xdist test failure on TestStreakRewards.test_order_with_study_product_applies_discount_and_increments_streak was root-caused to test_kapa_api::TestOrders creating orders on shared userId=guest while the streak test had an active exam for guest, causing base_streak+1 to become base_streak+2/3. Fix: dedicated userId for the streak increment test."
+}

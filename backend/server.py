@@ -328,6 +328,12 @@ async def root():
     return {"service": "Kapa Learning API", "status": "ok"}
 
 
+@app.get("/health")
+@api_router.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @api_router.get("/v1/darkstore/nearest")
 async def get_nearest_darkstore(lat: float = 28.7085, lng: float = 77.1930):
     store = await db.darkstores.find_one({}, {"_id": 0})
@@ -366,10 +372,13 @@ async def get_featured_products():
 
 @api_router.post("/v1/cart/sync")
 async def sync_cart(payload: CartSyncRequest):
+    ids = [i.productId for i in payload.items]
+    prods = await db.products.find({"id": {"$in": ids}}, {"_id": 0}).to_list(500)
+    by_id = {p["id"]: p for p in prods}
     valid_items = []
     total = 0.0
     for item in payload.items:
-        product = await db.products.find_one({"id": item.productId}, {"_id": 0})
+        product = by_id.get(item.productId)
         if not product:
             continue
         available_qty = min(item.quantity, product["stockQuantity"])
@@ -487,10 +496,7 @@ async def delete_address(addressId: str, userId: str = "guest"):
 
 
 # ---------- School Kits ----------
-async def resolve_kit(kit: dict) -> dict:
-    skus = [sku for sku, _ in kit["items"]]
-    prods = await db.products.find({"sku": {"$in": skus}}, {"_id": 0}).to_list(100)
-    by_sku = {p["sku"]: p for p in prods}
+def resolve_kit(kit: dict, by_sku: dict) -> dict:
     items = []
     mrp_total = 0.0
     kit_price = 0.0
@@ -516,10 +522,17 @@ async def resolve_kit(kit: dict) -> dict:
     }
 
 
+async def products_by_sku(kits: List[dict]) -> dict:
+    skus = list({sku for k in kits for sku, _ in k["items"]})
+    prods = await db.products.find({"sku": {"$in": skus}}, {"_id": 0}).to_list(500)
+    return {p["sku"]: p for p in prods}
+
+
 @api_router.get("/v1/kits")
 async def list_kits():
     kits = await db.kits.find({}, {"_id": 0}).to_list(50)
-    return [await resolve_kit(k) for k in kits]
+    by_sku = await products_by_sku(kits)
+    return [resolve_kit(k, by_sku) for k in kits]
 
 
 @api_router.get("/v1/kits/{kitId}")
@@ -527,7 +540,7 @@ async def get_kit(kitId: str):
     kit = await db.kits.find_one({"id": kitId}, {"_id": 0})
     if not kit:
         raise HTTPException(status_code=404, detail="Kit not found")
-    return await resolve_kit(kit)
+    return resolve_kit(kit, await products_by_sku([kit]))
 
 
 # ---------- Reorder ----------
