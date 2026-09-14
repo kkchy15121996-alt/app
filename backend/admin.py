@@ -17,10 +17,17 @@ from storage import APP_NAME, get_object, init_storage, put_object
 
 logger = logging.getLogger(__name__)
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
+def _required_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Missing required environment variable {name}")
+    return value
+
+
+JWT_SECRET = _required_env("JWT_SECRET")
 JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "720"))
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@kapalearning.com").lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Kapa@Admin2026")
+ADMIN_EMAIL = _required_env("ADMIN_EMAIL").lower()
+ADMIN_PASSWORD = _required_env("ADMIN_PASSWORD")
 
 DUMMY_HASH = bcrypt.hashpw(b"not-the-real-password", bcrypt.gensalt()).decode()
 bearer = HTTPBearer(auto_error=False)

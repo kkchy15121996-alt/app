@@ -81,6 +81,16 @@ class TestAdminAuth:
         assert r.status_code == 200, r.text
         assert r.json().get("email") == ADMIN_EMAIL
 
+    def test_me_with_tampered_token(self, admin_token):
+        # flip the last character of the signature portion to invalidate it
+        tampered = admin_token[:-1] + ("A" if admin_token[-1] != "A" else "B")
+        r = requests.get(
+            f"{BASE_URL}/api/admin/auth/me",
+            headers={"Authorization": f"Bearer {tampered}"},
+            timeout=15,
+        )
+        assert r.status_code == 401, r.text
+
     def test_stats(self, admin_token):
         r = requests.get(
             f"{BASE_URL}/api/admin/stats",
